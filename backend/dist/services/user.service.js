@@ -6,60 +6,108 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserService = void 0;
 const user_factory_1 = require("../factory/user.factory");
 const bcrypt_1 = __importDefault(require("bcrypt"));
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const responseHandler_1 = __importDefault(require("../utility/responseHandler"));
+const errorClass_1 = require("../utility/errorClass");
+const responseCodes_1 = require("../enums/responseCodes");
+const email_service_1 = require("./email.service");
 class UserService {
     constructor() {
         this.userFactory = new user_factory_1.UserFactory();
-    }
-    async login(email, password) {
-        const user = await this.userFactory.findUserByEmail(email);
-        if (!user) {
-            throw new Error("Invalid email or password");
-        }
-        const isPasswordValid = await bcrypt_1.default.compare(password, user.password);
-        if (!isPasswordValid) {
-            throw new Error("Invalid email or password");
-        }
-        const token = jsonwebtoken_1.default.sign({ userId: user._id }, process.env.JWT_SECRET || "defaultsecret", { expiresIn: "1h" });
-        const refreshToken = jsonwebtoken_1.default.sign({ userId: user._id }, process.env.JWT_REFRESH_SECRET || "defaultrefreshsecret", { expiresIn: "7d" });
-        return { message: "Login successful", user, token, refreshToken, };
+        this.emailService = new email_service_1.EmailService();
     }
     async createUser(userData) {
-        if (!userData.email || !userData.password || !userData.name) {
-            throw new Error("Missing required fields");
+        var _a;
+        try {
+            if (userData.email === "" || userData.password === "" || userData.name === "") {
+                throw errorClass_1.AppError.badRequest("Missing required fields");
+            }
+            const existingUser = await this.userFactory.findUserByEmail(userData.email);
+            if (existingUser) {
+                throw errorClass_1.AppError.conflict("User with this email already exists");
+            }
+            if (userData.role == null || userData.role === "") {
+                const defaultRole = await this.userFactory.getDefaultRole();
+                userData.role = defaultRole._id;
+            }
+            const plainPassword = userData.password;
+            const roleName = await this.userFactory.getRoleNameById(String(userData.role));
+            const hashedPassword = await bcrypt_1.default.hash(userData.password, 10);
+            userData.password = hashedPassword;
+            const user = await this.userFactory.createUser(userData);
+            let emailSent = false;
+            let emailError = null;
+            try {
+                await this.emailService.sendWelcomeCredentialsEmail({
+                    userName: user.name,
+                    email: user.email,
+                    password: plainPassword,
+                    roleName,
+                    loginLink: `${((_a = process.env.FRONTEND_URL) === null || _a === void 0 ? void 0 : _a.trim()) || "http://localhost:5173"}/login/${roleName}`,
+                });
+                emailSent = true;
+            }
+            catch (error) {
+                emailError = (error === null || error === void 0 ? void 0 : error.message) || "Failed to send credentials email";
+            }
+            return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.OK, emailSent
+                ? "User created successfully and credentials emailed"
+                : "User created successfully but credentials email could not be sent", {
+                user,
+                emailSent,
+                emailError,
+            });
         }
-        const existingUser = await this.userFactory.findUserByEmail(userData.email);
-        if (existingUser) {
-            throw new Error("Email already in use");
+        catch (error) {
+            throw error;
         }
-        const hashedPassword = await bcrypt_1.default.hash(userData.password, 10);
-        userData.password = hashedPassword;
-        const user = await this.userFactory.createUser(userData);
-        return user;
     }
-    async getAllUsers() {
-        const users = await this.userFactory.findAllUsers();
-        return users;
+    async getAllUsers(roleName) {
+        try {
+            const users = await this.userFactory.findAllUsers(roleName);
+            if (users == null || users.length === 0) {
+                throw errorClass_1.AppError.notFound("no users");
+            }
+            return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.OK, "User fetched successfully", users);
+        }
+        catch (error) {
+            throw error;
+        }
     }
     async getUserById(userId) {
         const user = await this.userFactory.findUserById(userId);
-        return user;
+        return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.OK, "successfully fetched Users", user);
     }
     async updateUser(userId, updateData) {
-        const user = await this.userFactory.findUserById(userId);
-        if (!user) {
-            return null;
+        try {
+            await this.userFactory.findUserById(userId);
+            if (updateData.email != null && updateData.email !== "") {
+                const existingUser = await this.userFactory.findUserByEmail(updateData.email);
+                if (existingUser && existingUser._id.toString() !== userId) {
+                    throw errorClass_1.AppError.conflict("User with this email already exists");
+                }
+            }
+            if (updateData.password != null && updateData.password !== "") {
+                updateData.password = await bcrypt_1.default.hash(updateData.password, 10);
+            }
+            const updatedUser = await this.userFactory.updateUser(userId, updateData);
+            return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.OK, "User updated successfully", updatedUser);
         }
-        const updatedUser = await this.userFactory.updateUser(userId, updateData);
-        return updatedUser;
+        catch (error) {
+            throw error;
+        }
     }
     async deleteUser(userId) {
-        const user = await this.userFactory.findUserById(userId);
-        if (!user) {
-            return false;
+        try {
+            const user = await this.userFactory.findUserById(userId);
+            if (user == null) {
+                throw errorClass_1.AppError.notFound("User Not Found");
+            }
+            const result = await this.userFactory.deleteUser(userId);
+            return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.OK, "Successfully deleted", result);
         }
-        await this.userFactory.deleteUser(userId);
-        return true;
+        catch (error) {
+            throw error;
+        }
     }
 }
 exports.UserService = UserService;

@@ -1,51 +1,128 @@
 import './App.css';
+import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { Provider } from 'react-redux';
-import { store } from './app/store';
+import { useDispatch, useSelector } from 'react-redux';
+import { initializeAuth } from './features/authSlice';
 
-// ── Layout ──
-import DashboardLayout from './layouts/adminLayout';
+// ── Layouts ──
+import AdminLayout   from './layouts/adminLayout';
+import FacultyLayout from './layouts/FacultyLayout';
+import StudentLayout from './layouts/studentLayout';
 
-// ── 3 Separate Login Pages ──
-import AdminLogin from './pages/AdminLogin';
-import StudentLogin from './pages/StudentLogin';
+// ── Login Pages ──
+import AdminLogin   from './pages/AdminLogin';
 import FacultyLogin from './pages/FacultyLogin';
+import StudentLogin from './pages/StudentLogin';
 
-// ── Dashboard Pages ──
+// ── Admin Pages ──
 import Dashboard        from './components/Dashboard';
-import ManageStudents   from './pages/ManageStudent';
-import ManageFaculty    from './pages/ManageFaculty';
-import ManageCourses    from './pages/ManageCourses';
-import RolesPermissions from './pages/RolesPermissions';
-import HelpGuide        from './pages/Helpguide';
+import ManageStudents   from './pages/admin/ManageStudent';
+import ManageFaculty    from './pages/admin/ManageFaculty';
+import ManageCourses    from './pages/admin/ManageCourses';
+import RolesPermissions from './pages/admin/RolesPermissions';
+import HelpGuide        from './pages/admin/Helpguide';
 
-// ✅ ProtectedRoute: if not logged in → redirect to login
-// function ProtectedRoute({ children }: { children: React.ReactNode }) {
-//   const user = useSelector((state: any) => state.auth.user);
-//   return user ? <>{children}</> : <Navigate to="/login/admin" />;
-// }
+// ── Faculty Pages ──
+import FacultyDashboard from './components/FacultyDashboad';
+import MyClasses        from './pages/faculty/MyClasses';
+import StudentList      from './pages/faculty/StudentList';
+import MarkAttendance   from './pages/faculty/MarkAttendance';
 
+// ── Student Pages ──                                  // ✅ new
+import StudentDashboard from './components/studentDashboard';
+import MyCourses        from './pages/student/MyCourses';
+import MyAttendance     from './pages/student/Myattendance ';
+
+
+// ─────────────────────────────────────────
+// ✅ ProtectedRoute
+// Redirects to login if user is not logged in
+// ─────────────────────────────────────────
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, initialized } = useSelector((state: any) => state.auth);
+  if (!initialized) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 text-sm text-gray-500">
+        Restoring session...
+      </div>
+    );
+  }
+  return user ? <>{children}</> : <Navigate to="/login/admin" />;
+}
+
+// ─────────────────────────────────────────
+// ✅ RoleRedirect
+// After login redirects to correct dashboard
+// based on role returned from your backend
+// ─────────────────────────────────────────
+function RoleRedirect() {
+  const { user, initialized } = useSelector((state: any) => state.auth);
+
+  if (!initialized) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 text-sm text-gray-500">
+        Restoring session...
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/login/admin" />;
+
+  // role can be object { name: "admin" } or plain string "admin"
+  const role = user?.role?.name || user?.role || "";
+
+  if (role === "admin")   return <Navigate to="/admin/dashboard" />;
+  if (role === "faculty") return <Navigate to="/faculty/dashboard" />;
+  if (role === "student") return <Navigate to="/student/dashboard" />;
+
+  return <Navigate to="/login/admin" />;
+}
+
+// ─────────────────────────────────────────
 // ✅ All routes
+// ─────────────────────────────────────────
 function AppRoutes() {
+  const dispatch = useDispatch();
+  const initialized = useSelector((state: any) => state.auth.initialized);
+
+  useEffect(() => {
+    if (!initialized) {
+      dispatch(initializeAuth() as any);
+    }
+  }, [dispatch, initialized]);
+
   return (
     <Routes>
 
-      {/* ── Default redirect ── */}
-      <Route path="/"      element={<Navigate to="/login/admin" />} />
+      {/* ── Default: redirect based on role ── */}
+      <Route path="/"      element={<RoleRedirect />} />
       <Route path="/login" element={<Navigate to="/login/admin" />} />
 
-      {/* ── 3 Separate Login Pages ── */}
+      {/* ── Login Pages (public) ── */}
       <Route path="/login/admin"   element={<AdminLogin />} />
       <Route path="/login/faculty" element={<FacultyLogin />} />
       <Route path="/login/student" element={<StudentLogin />} />
 
-      {/* ── Protected Pages ── */}
-      <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
-      <Route path="/students"  element={<DashboardLayout><ManageStudents /></DashboardLayout>} />
-      <Route path="/faculty"   element={<DashboardLayout><ManageFaculty /></DashboardLayout>} />
-      <Route path="/courses"   element={<DashboardLayout><ManageCourses /></DashboardLayout>} />
-      <Route path="/roles"     element={<DashboardLayout><RolesPermissions /></DashboardLayout>} />
-      <Route path="/help"      element={<DashboardLayout><HelpGuide /></DashboardLayout>} />
+      {/* ── Admin Protected Pages ── */}
+      <Route path="/admin/dashboard" element={<ProtectedRoute><AdminLayout><Dashboard /></AdminLayout></ProtectedRoute>} />
+      <Route path="/students"        element={<ProtectedRoute><AdminLayout><ManageStudents /></AdminLayout></ProtectedRoute>} />
+      <Route path="/faculty"         element={<ProtectedRoute><AdminLayout><ManageFaculty /></AdminLayout></ProtectedRoute>} />
+      <Route path="/courses"         element={<ProtectedRoute><AdminLayout><ManageCourses /></AdminLayout></ProtectedRoute>} />
+      <Route path="/roles"           element={<ProtectedRoute><AdminLayout><RolesPermissions /></AdminLayout></ProtectedRoute>} />
+      <Route path="/help"            element={<ProtectedRoute><AdminLayout><HelpGuide /></AdminLayout></ProtectedRoute>} />
+
+      {/* ── Faculty Protected Pages ── */}
+      <Route path="/faculty/dashboard"  element={<ProtectedRoute><FacultyLayout><FacultyDashboard /></FacultyLayout></ProtectedRoute>} />
+      <Route path="/faculty/classes"    element={<ProtectedRoute><FacultyLayout><MyClasses /></FacultyLayout></ProtectedRoute>} />
+      <Route path="/faculty/students"   element={<ProtectedRoute><FacultyLayout><StudentList /></FacultyLayout></ProtectedRoute>} />
+      <Route path="/faculty/attendance" element={<ProtectedRoute><FacultyLayout><MarkAttendance /></FacultyLayout></ProtectedRoute>} />
+      <Route path="/faculty/help"       element={<ProtectedRoute><FacultyLayout><HelpGuide /></FacultyLayout></ProtectedRoute>} />
+
+      {/* ── Student Protected Pages ── */}
+      <Route path="/student/dashboard"   element={<ProtectedRoute><StudentLayout><StudentDashboard /></StudentLayout></ProtectedRoute>} />
+      <Route path="/student/courses"     element={<ProtectedRoute><StudentLayout><MyCourses /></StudentLayout></ProtectedRoute>} />
+      <Route path="/student/attendance"  element={<ProtectedRoute><StudentLayout><MyAttendance /></StudentLayout></ProtectedRoute>} />
+      <Route path="/student/help"        element={<ProtectedRoute><StudentLayout><HelpGuide /></StudentLayout></ProtectedRoute>} />
 
       {/* ── 404 ── */}
       <Route path="*" element={
@@ -61,13 +138,8 @@ function AppRoutes() {
   );
 }
 
-// ✅ Provider wraps everything
 function App() {
-  return (
-    <Provider store={store}>
-      <AppRoutes />
-    </Provider>
-  );
+  return <AppRoutes />;
 }
 
 export default App;

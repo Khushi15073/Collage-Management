@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.connectDB = exports.DatabaseConnection = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
-const env_config_1 = __importDefault(require("../config/env.config"));
+const env_config_1 = require("../config/env.config");
 class DatabaseConnection {
     constructor() { }
     static get() {
@@ -16,7 +16,7 @@ class DatabaseConnection {
     }
     async connect() {
         try {
-            await mongoose_1.default.connect(env_config_1.default.MONGODB_URI);
+            await mongoose_1.default.connect(env_config_1.config.MONGODB_URI);
             console.log("Connected to MongoDB");
         }
         catch (error) {

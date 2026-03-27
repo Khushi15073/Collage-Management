@@ -24,7 +24,7 @@ function AdminLogin() {
       const role = result.payload?.data?.user?.role;
 
       if (role === "admin") {
-        navigate("/dashboard");
+        navigate("/admin/dashboard");
       } else {
         alert("Access denied. This portal is for Admins only.");
       }

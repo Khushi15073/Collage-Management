@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useSelector } from "react-redux";
 import {
   LayoutDashboard, Users, UsersRound, BookOpen,
   Settings, HelpCircle, ChevronLeft, GraduationCap
@@ -28,7 +29,7 @@ const menuItems: MenuItem[] = [
 ];
 
 export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
-
+  const user = useSelector((state: any) => state.auth.user);
 
   const navigate = useNavigate();
 
@@ -92,7 +93,9 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       {!isCollapsed && (
         <div className="p-4 border-t border-gray-200">
           <div className="text-xs text-gray-500 mb-1">Current Role</div>
-          <div className="text-sm font-semibold text-blue-600">Admin</div>
+          <div className="text-sm font-semibold text-blue-600">
+            {user?.role ? String(user.role).charAt(0).toUpperCase() + String(user.role).slice(1) : "Admin"}
+          </div>
         </div>
       )}
 

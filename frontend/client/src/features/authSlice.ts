@@ -47,12 +47,14 @@ interface AuthState {
   user: User | null;
   loading: boolean;
   error: string | null;
+  initialized: boolean;
 }
 
 const initialState: AuthState = {
   user: null,
   loading: false,
   error: null,
+  initialized: false,
 };
 
 function normalizeUser(user: AuthResponse["data"]["user"]): User {
@@ -114,6 +116,39 @@ export const logoutUser = createAsyncThunk(
   }
 );
 
+export const initializeAuth = createAsyncThunk(
+  "auth/initialize",
+  async (_, { rejectWithValue }) => {
+    try {
+      const meResponse = await axios.get("http://localhost:8000/api/auth/me", {
+        withCredentials: true,
+      });
+
+      return normalizeUser(meResponse.data.data.user);
+    } catch (meError: any) {
+      if (meError.response?.status !== 401) {
+        return rejectWithValue(meError.response?.data?.message || "Failed to restore session");
+      }
+
+      try {
+        await axios.post(
+          "http://localhost:8000/api/auth/refresh-token",
+          {},
+          { withCredentials: true }
+        );
+
+        const refreshedMeResponse = await axios.get("http://localhost:8000/api/auth/me", {
+          withCredentials: true,
+        });
+
+        return normalizeUser(refreshedMeResponse.data.data.user);
+      } catch {
+        return null;
+      }
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -132,10 +167,12 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
         state.user = normalizeUser(action.payload.data.user);
+        state.initialized = true;
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+        state.initialized = true;
       })
       .addCase(signUser.pending, (state) => {
         state.loading = true;
@@ -144,15 +181,39 @@ const authSlice = createSlice({
       .addCase(signUser.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload.data.user;
+        state.initialized = true;
       })
       .addCase(signUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+        state.initialized = true;
       })
       .addCase(logoutUser.fulfilled, (state) => {
         state.loading = false;
         state.user = null;
         state.error = null;
+        state.initialized = true;
+      })
+      .addCase(logoutUser.rejected, (state) => {
+        state.loading = false;
+        state.user = null;
+        state.error = null;
+        state.initialized = true;
+      })
+      .addCase(initializeAuth.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(initializeAuth.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload;
+        state.initialized = true;
+      })
+      .addCase(initializeAuth.rejected, (state, action) => {
+        state.loading = false;
+        state.user = null;
+        state.error = (action.payload as string) || null;
+        state.initialized = true;
       });
   },
 });

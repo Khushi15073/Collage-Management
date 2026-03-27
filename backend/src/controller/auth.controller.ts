@@ -51,7 +51,7 @@ export class authController {
         secure: false,
         maxAge: 15 * 60 * 1000,
       });
-      res.cookie("refreshtoken", result.data.refreshtoken, {
+      res.cookie("refreshToken", result.data.refreshToken, {
         httpOnly: true,
         sameSite: "strict",
         secure: false,
@@ -85,6 +85,19 @@ export class authController {
 
     } catch (error) {
       throw error;
+    }
+  }
+
+  async me(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user?.userId;
+      const result = await this.authService.getCurrentUser(userId);
+      ResponseHandler.handleResponse(res, result);
+    } catch (error) {
+      const errorResponse = await ResponseHandler.handleError(
+        error instanceof Error ? error : new Error("Unknown error occurred")
+      );
+      ResponseHandler.handleResponse(res, errorResponse);
     }
   }
 

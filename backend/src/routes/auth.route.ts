@@ -8,6 +8,7 @@ const authcontroller = new authController()
 
 router.post("/login", authcontroller.login.bind(authcontroller));
 router.post("/refresh-token", authcontroller.refreshToken.bind(authcontroller));
+router.get("/me", authMiddleware, authcontroller.me.bind(authcontroller));
 router.post("/logout", authMiddleware, authcontroller.logout.bind(authcontroller),);
 
 

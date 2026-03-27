@@ -9,9 +9,10 @@ export class roleFactory {
         try {
             const role = new RoleModel(roleData)
             await role.save()
+            await role.populate("permissions");
             return ResponseHandler.sendResponse(
                 ResponseCodes.CREATED,
-                "User created successfully",
+                "Role created successfully",
                 role
             )
         } catch (error) {
@@ -33,7 +34,7 @@ export class roleFactory {
 
     public async getAllRole() {
         try {
-            const role = await RoleModel.find();
+            const role = await RoleModel.find().populate("permissions");
             if (!role) {
                 throw AppError.notFound("Role not found")
             }
@@ -47,7 +48,7 @@ export class roleFactory {
     public async getRoleById(roleId: string) {
 
         try {
-            const role = await RoleModel.findById(roleId)
+            const role = await RoleModel.findById(roleId).populate("permissions")
             if (!role) {
                 throw AppError.notFound("Role not found")
             }
@@ -66,11 +67,13 @@ export class roleFactory {
         try {
             const role = await RoleModel.findByIdAndUpdate(roleId, upatedRole, {
                 new: true,
+                runValidators: true,
             });
 
             if (!role) {
                 throw AppError.notFound("Role not found")
             }
+            await role.populate("permissions");
             return role;
         }
         catch (error) {

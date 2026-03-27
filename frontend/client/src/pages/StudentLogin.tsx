@@ -24,7 +24,7 @@ function StudentLogin() {
       const role = result.payload?.data?.user?.role;
 
       if (role === "student") {
-        navigate("/dashboard");
+        navigate("/student/dashboard");
       } else {
         alert("Access denied. This portal is for Students only.");
       }

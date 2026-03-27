@@ -24,7 +24,7 @@ function FacultyLogin() {
       const role = result.payload?.data?.user?.role;
 
       if (role === "faculty") {
-        navigate("/dashboard");
+        navigate("/faculty/dashboard");
       } else {
         alert("Access denied. This portal is for Faculty only.");
       }

@@ -74,4 +74,8 @@ export class authFactory {
     .select("+password")   
     .populate("role"); 
   }
+
+  async findUserById(userId: string) {
+    return UserModel.findById(userId).populate("role");
+  }
 }

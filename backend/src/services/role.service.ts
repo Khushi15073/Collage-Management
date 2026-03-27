@@ -1,7 +1,7 @@
 import { ResponseCodes } from "../enums/responseCodes";
 import { roleFactory } from "../factory/role.factory";
 import { CreateRoleDTO, UpdateRoleDTO } from "../interfaces/role.interface";
-
+import { PermissionModel } from "../schemas/permission.schema";
 import { AppError } from "../utility/errorClass";
 import ResponseHandler from "../utility/responseHandler";
 
@@ -11,6 +11,16 @@ export class roleService {
         try {
             if (!roleData.name) {
                 throw AppError.badRequest("Missing required fields")
+            }
+
+            if (roleData.permissions && roleData.permissions.length > 0) {
+                const permissionCount = await PermissionModel.countDocuments({
+                    _id: { $in: roleData.permissions },
+                });
+
+                if (permissionCount !== roleData.permissions.length) {
+                    throw AppError.badRequest("One or more permissions are invalid");
+                }
             }
 
             await this.roleFactory.findRoleByName(roleData.name)
@@ -51,6 +61,16 @@ export class roleService {
 
     public async UpdateRole(roleId: string, upatedRole: UpdateRoleDTO) {
         try {
+            if (upatedRole.permissions) {
+                const permissionCount = await PermissionModel.countDocuments({
+                    _id: { $in: upatedRole.permissions },
+                });
+
+                if (permissionCount !== upatedRole.permissions.length) {
+                    throw AppError.badRequest("One or more permissions are invalid");
+                }
+            }
+
             const UpdateRole = await this.roleFactory.updateRole(roleId, upatedRole)
             return ResponseHandler.sendResponse(
                 ResponseCodes.OK,

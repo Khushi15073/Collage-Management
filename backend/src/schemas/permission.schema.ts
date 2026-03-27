@@ -10,7 +10,7 @@ const permissionSchema = new Schema<IPermission>(
             required: true,
             unique: true,
             trim: true,
-            match: [/^[A-Za-z]+(?:\s[A-Za-z]+)*$/, "Please Provide Valid Name"],
+            match: [/^[a-z]+(?:_[a-z]+)*$/, "Please provide a valid permission key"],
         },
 
         description: {

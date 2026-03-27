@@ -1,0 +1,22 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const user_route_1 = __importDefault(require("./user.route"));
+const auth_route_1 = __importDefault(require("./auth.route"));
+const permission_route_1 = __importDefault(require("./permission.route"));
+const role_route_1 = __importDefault(require("./role.route"));
+const course_route_1 = __importDefault(require("./course.route"));
+const dashboard_route_1 = __importDefault(require("./dashboard.route"));
+const attendance_route_1 = __importDefault(require("./attendance.route"));
+const router = express_1.default.Router();
+router.use("/user", user_route_1.default);
+router.use('/auth', auth_route_1.default);
+router.use("/permission", permission_route_1.default);
+router.use("/role", role_route_1.default);
+router.use("/course", course_route_1.default);
+router.use("/dashboard", dashboard_route_1.default);
+router.use("/attendance", attendance_route_1.default);
+exports.default = router;

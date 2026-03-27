@@ -26,9 +26,29 @@ export class UserFactory {
     }
   }
 
-  public async findAllUsers() {
+  public async getRoleNameById(roleId: string) {
+    const role = await RoleModel.findById(roleId).select("name");
+    if (!role) {
+      throw AppError.notFound("Role not found");
+    }
+
+    return role.name;
+  }
+
+  public async findAllUsers(roleName?: string) {
     try {
-      const users = await UserModel.find().populate("role");
+      let filter = {};
+
+      if (roleName) {
+        const role = await RoleModel.findOne({ name: roleName });
+        if (!role) {
+          throw AppError.notFound("Role not found");
+        }
+
+        filter = { role: role._id };
+      }
+
+      const users = await UserModel.find(filter).populate("role");
       if (users.length === 0) {
         throw AppError.notFound("No users found");
       }

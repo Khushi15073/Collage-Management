@@ -24,6 +24,12 @@ interface StudentState {
   error: string | null;
 }
 
+type CreateStudentResult = {
+  student: Student;
+  emailSent: boolean;
+  emailError: string | null;
+};
+
 const initialState: StudentState = {
   students: [],
   loading: false,
@@ -44,21 +50,16 @@ function normalizeStudent(student: any): Student {
   };
 }
 
-function isStudentRecord(student: any) {
-  const roleName = typeof student.role === "string" ? student.role : student.role?.name;
-  return roleName === "student";
-}
-
 export const fetchStudents = createAsyncThunk(
   "students/fetchAll",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(BASE_URL + "/api/user", {
+      const response = await axios.get(BASE_URL + "/api/user?role=student", {
         withCredentials: true,
       });
 
       const users = response.data?.data || response.data || [];
-      return users.filter(isStudentRecord).map(normalizeStudent);
+      return users.map(normalizeStudent);
     } catch (error: any) {
       return rejectWithValue(
         error.response?.status === 401 ? "Session expired. Please log in again." : (error.response?.data?.message || "Failed to fetch students")
@@ -79,12 +80,16 @@ export const createStudent = createAsyncThunk(
       role: string;
     },
     { rejectWithValue }
-  ) => {
+    ) => {
     try {
       const response = await axios.post(BASE_URL + "/api/user", data, {
         withCredentials: true,
       });
-      return normalizeStudent(response.data?.data?.user || response.data?.data || response.data);
+      return {
+        student: normalizeStudent(response.data?.data?.user || response.data?.data || response.data),
+        emailSent: Boolean(response.data?.data?.emailSent),
+        emailError: response.data?.data?.emailError || null,
+      } as CreateStudentResult;
     } catch (error: any) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to create student"
@@ -165,9 +170,9 @@ const studentSlice = createSlice({
       state.loading = true;
       state.error = null;
     });
-    builder.addCase(createStudent.fulfilled, (state, action: PayloadAction<Student>) => {
+    builder.addCase(createStudent.fulfilled, (state, action: PayloadAction<CreateStudentResult>) => {
       state.loading = false;
-      state.students.push(action.payload);
+      state.students.push(action.payload.student);
     });
     builder.addCase(createStudent.rejected, (state, action) => {
       state.loading = false;

@@ -35,7 +35,9 @@ export class UserController {
 
   async getAllUsers(req: Request, res: Response) {
     try {
-      const users = await this.userService.getAllUsers();
+      const roleName =
+        typeof req.query.role === "string" ? req.query.role : undefined;
+      const users = await this.userService.getAllUsers(roleName);
       ResponseHandler.handleResponse(res, users);
     } catch (error) {
       const errorResponse = await ResponseHandler.handleError(

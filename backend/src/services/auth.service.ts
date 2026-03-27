@@ -65,6 +65,23 @@ export class authService {
     );
   }
 
+  async getCurrentUser(userId: string) {
+    if (!userId) {
+      throw AppError.unauthorized("Unauthorized");
+    }
+
+    const user = await this.authFactory.findUserById(userId);
+    if (!user) {
+      throw AppError.unauthorized("Unauthorized");
+    }
+
+    return ResponseHandler.sendResponse(
+      ResponseCodes.OK,
+      "Current user fetched successfully",
+      { user }
+    );
+  }
+
   async logout(refreshToken: string) {
     await this.authFactory.deleteRefreshToken(refreshToken);
   }
