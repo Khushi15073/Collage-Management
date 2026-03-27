@@ -61,8 +61,8 @@ function HelpGuide() {
             <li>• View assigned classes</li>
             <li>• Access student lists</li>
             <li>• Mark attendance</li>
-            <li>• Create assignments</li>
-            <li>• Grade submissions</li>
+            <li>• Manage course activities</li>
+            <li>• Review student progress</li>
             <li>• View class analytics</li>
           </ul>
 
@@ -90,7 +90,7 @@ function HelpGuide() {
           <ul className="space-y-1.5 text-sm text-gray-600 flex-1">
             <li>• View enrolled courses</li>
             <li>• Track attendance</li>
-            <li>• Submit assignments</li>
+            <li>• Follow course updates</li>
             <li>• Check grades</li>
             <li>• View results</li>
             <li>• Access course materials</li>
@@ -140,7 +140,7 @@ function HelpGuide() {
                 "Role-based access control",
                 "CRUD operations for all entities",
                 "Attendance management",
-                "Assignment submission system",
+                "Course and classroom management",
                 "Grade management",
                 "Analytics and reporting",
               ].map((item) => (

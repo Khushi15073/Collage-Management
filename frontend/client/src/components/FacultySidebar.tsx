@@ -1,6 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
 
-// ✅ Assignments removed as requested
 const menuItems = [
   { icon: "⊞", label: "Dashboard",      path: "/faculty/dashboard"  },
   { icon: "📚", label: "My Classes",     path: "/faculty/classes"    },

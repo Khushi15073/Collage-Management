@@ -46,15 +46,6 @@ export const permissionGroups: PermissionGroup[] = [
     ],
   },
   {
-    section: "Assignments",
-    permissions: [
-      { key: "create_assignments", label: "Create Assignments", description: "Create new assignments" },
-      { key: "view_assignments", label: "View Assignments", description: "View assignments" },
-      { key: "grade_assignments", label: "Grade Assignments", description: "Grade student submissions" },
-      { key: "delete_assignments", label: "Delete Assignments", description: "Remove assignments" },
-    ],
-  },
-  {
     section: "Reports",
     permissions: [
       { key: "view_reports", label: "View Reports", description: "View generated reports" },
