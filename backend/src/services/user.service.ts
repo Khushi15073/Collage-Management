@@ -6,6 +6,7 @@ import { AppError } from "../utility/errorClass";
 import { ResponseCodes } from "../enums/responseCodes";
 import { CreateUserDTO, UpdateUserDTO } from "../interfaces/user.interfaces";
 import { EmailService } from "./email.service";
+import type { PaginationMeta } from "../interfaces/common.interface";
 
 export class UserService {
   private userFactory = new UserFactory();
@@ -65,17 +66,44 @@ export class UserService {
     }
   }
 
-  public async getAllUsers(roleName?: string): Promise<IUser[] | IResponse> {
+  public async getAllUsers(options?: {
+    roleName?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+    skip?: number;
+  }): Promise<IUser[] | IResponse> {
     try {
-      const users = await this.userFactory.findAllUsers(roleName);
-      if (users == null || users.length === 0) {
-        throw AppError.notFound("no users");
+      let roleId: string | undefined;
+      if (options?.roleName) {
+        roleId = String(await this.userFactory.findRoleIdByName(options.roleName));
       }
+
+      const page = options?.page ?? 1;
+      const limit = options?.limit ?? 10;
+      const skip = options?.skip ?? 0;
+
+      const { users, totalItems } = await this.userFactory.findAllUsers({
+        roleId,
+        search: options?.search,
+        skip,
+        limit,
+      });
+
+      const pagination: PaginationMeta = {
+        page,
+        limit,
+        totalItems,
+        totalPages: totalItems === 0 ? 0 : Math.ceil(totalItems / limit),
+      };
 
       return ResponseHandler.sendResponse(
         ResponseCodes.OK,
         "User fetched successfully",
-        users,
+        {
+          items: users,
+          pagination,
+        },
       );
     } catch (error) {
       throw error;

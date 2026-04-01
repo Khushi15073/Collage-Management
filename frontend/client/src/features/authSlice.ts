@@ -3,14 +3,14 @@ import axios from "axios";
 
 interface Role {
   _id?: string;
-  name: "admin" | "faculty" | "student";
+  name: string;
 }
 
 interface User {
   _id?: string;
   name: string;
   email: string;
-  role: "admin" | "faculty" | "student";
+  role: string;
 }
 
 interface AuthResponse {

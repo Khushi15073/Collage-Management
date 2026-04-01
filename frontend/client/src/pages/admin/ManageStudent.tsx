@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchStudents,
@@ -6,9 +6,22 @@ import {
   updateStudent,
   deleteStudent,
   clearStudentError,
+  setStudentLimit,
+  setStudentPage,
 } from "../../features/studentSlice";
 import type { Student } from "../../features/studentSlice";
 import { fetchRoles } from "../../features/roleSlice";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/Table";
+import PaginationControls from "../../components/ui/PaginationControls";
+import { useDashboardSearch } from "../../context/DashboardSearchContext";
 
 const emptyForm = {
   name: "",
@@ -21,27 +34,59 @@ const emptyForm = {
 
 function ManageStudents() {
   const dispatch = useDispatch();
+  const { searchQuery } = useDashboardSearch();
 
   const students = useSelector((state: any) => state.students.students);
   const loading = useSelector((state: any) => state.students.loading);
   const error = useSelector((state: any) => state.students.error);
+  const currentPage = useSelector((state: any) => state.students.currentPage);
+  const limit = useSelector((state: any) => state.students.limit);
+  const totalItems = useSelector((state: any) => state.students.totalItems);
+  const totalPages = useSelector((state: any) => state.students.totalPages);
 
   const roles = useSelector((state: any) => state.roles.roles);
   const rolesLoading = useSelector((state: any) => state.roles.loading);
   const roleError = useSelector((state: any) => state.roles.error);
 
-  const [search, setSearch] = useState<string>("");
   const [showModal, setShowModal] = useState<boolean>(false);
   const [editStudent, setEditStudent] = useState<Student | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [emailNotice, setEmailNotice] = useState<{ sent: boolean; message: string } | null>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
+  const previousSearchRef = useRef(searchQuery);
 
   useEffect(() => {
-    dispatch(fetchStudents() as any);
     if (roles.length === 0) {
       dispatch(fetchRoles() as any);
     }
   }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (previousSearchRef.current !== debouncedSearch) {
+      previousSearchRef.current = debouncedSearch;
+
+      if (currentPage !== 1) {
+        dispatch(setStudentPage(1));
+        return;
+      }
+    }
+
+    dispatch(
+      fetchStudents({
+        page: currentPage,
+        limit,
+        search: debouncedSearch,
+      }) as any
+    );
+  }, [currentPage, debouncedSearch, dispatch, limit]);
 
   function openAddModal() {
     setEditStudent(null);
@@ -89,6 +134,13 @@ function ManageStudents() {
       );
 
       if (updateStudent.fulfilled.match(result)) {
+        dispatch(
+          fetchStudents({
+            page: currentPage,
+            limit,
+            search: debouncedSearch,
+          }) as any
+        );
         closeModal();
       }
     } else {
@@ -110,6 +162,14 @@ function ManageStudents() {
             ? `Credentials were emailed to ${form.email}.`
             : result.payload.emailError || "Student created, but email could not be sent.",
         });
+        dispatch(setStudentPage(1));
+        dispatch(
+          fetchStudents({
+            page: 1,
+            limit,
+            search: debouncedSearch,
+          }) as any
+        );
         closeModal();
       }
     }
@@ -118,7 +178,12 @@ function ManageStudents() {
   async function handleDelete(id: string) {
     const sure = window.confirm("Are you sure you want to delete this student?");
     if (!sure) return;
-    dispatch(deleteStudent(id) as any);
+    const result = await dispatch(deleteStudent(id) as any);
+
+    if (deleteStudent.fulfilled.match(result)) {
+      const nextPage = students.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage;
+      dispatch(setStudentPage(nextPage));
+    }
   }
 
   function handleFormChange(
@@ -128,19 +193,18 @@ function ManageStudents() {
     if (error) dispatch(clearStudentError());
   }
 
-  const filteredStudents = students.filter((s: Student) =>
-    s.name?.toLowerCase().includes(search.toLowerCase()) ||
-    s.email?.toLowerCase().includes(search.toLowerCase())
-  );
-
   const pageError = error || roleError;
   const isSessionError =
     pageError === "Session expired. Please log in again." ||
     pageError === "Unauthorized" ||
     pageError === "Invalid token";
+  const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * limit + 1;
+  const endIndex = totalItems === 0 ? 0 : startIndex + students.length - 1;
+  const canPreviousPage = currentPage > 1;
+  const canNextPage = totalPages > 0 && currentPage < totalPages;
 
   return (
-    <div className="p-8 min-h-screen bg-gray-50">
+    <div className="flex h-full flex-col overflow-hidden bg-gray-50 p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Manage Students</h1>
@@ -169,46 +233,59 @@ function ManageStudents() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-800">Student List</h2>
-          <input
-            type="text"
-            placeholder="Search students..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="px-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-56 bg-gray-50"
-          />
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-gray-800">Student List</h2>
+            <p className="mt-1 text-sm text-gray-400">
+              Page {totalPages === 0 ? 0 : currentPage} of {totalPages}
+            </p>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-gray-500">
+            <span>Rows</span>
+            <select
+              value={limit}
+              onChange={(event) => dispatch(setStudentLimit(Number(event.target.value)))}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {[10, 20, 50, 100].map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
-        <div className="overflow-x-auto">
+        <TableContainer className="min-h-0 flex-1 overflow-auto">
           {loading && students.length === 0 ? (
             <div className="py-16 text-center text-gray-400 text-sm">Loading students...</div>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Name</th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Email</th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Phone</th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Gender</th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Role</th>
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredStudents.map((student: Student) => (
-                  <tr key={student._id} className="border-b border-gray-50 hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 font-medium text-gray-800">{student.name}</td>
-                    <td className="px-6 py-4 text-gray-500 text-xs">{student.email}</td>
-                    <td className="px-6 py-4 text-gray-500 text-xs">{student.phoneNumber}</td>
-                    <td className="px-6 py-4 text-gray-500 capitalize">{student.gender}</td>
-                    <td className="px-6 py-4">
+            <Table>
+              <TableHead>
+                <TableRow className="bg-gray-50 border-b border-gray-100">
+                  <TableHeader>Name</TableHeader>
+                  <TableHeader>Email</TableHeader>
+                  <TableHeader>Phone</TableHeader>
+                  <TableHeader>Gender</TableHeader>
+                  <TableHeader>Role</TableHeader>
+                  <TableHeader>Actions</TableHeader>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {students.map((student: Student) => (
+                  <TableRow key={student._id} className="border-b border-gray-50 hover:bg-gray-50 transition">
+                    <TableCell className="font-medium text-gray-800">{student.name}</TableCell>
+                    <TableCell className="text-gray-500 text-xs">{student.email}</TableCell>
+                    <TableCell className="text-gray-500 text-xs">{student.phoneNumber}</TableCell>
+                    <TableCell className="text-gray-500 capitalize">{student.gender}</TableCell>
+                    <TableCell>
                       <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 capitalize">
                         {student.role?.name || "-"}
                       </span>
-                    </td>
-                    <td className="px-6 py-4">
+                    </TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => openEditModal(student)}
@@ -223,24 +300,34 @@ function ManageStudents() {
                           Delete
                         </button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-                {filteredStudents.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-sm text-gray-400">
+                {students.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-12 text-center text-sm text-gray-400">
                       {pageError ? "Unable to load students." : "No students found."}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           )}
-        </div>
+        </TableContainer>
 
-        <div className="px-6 py-3 border-t border-gray-100 text-xs text-gray-400">
-          Showing {filteredStudents.length} of {students.length} students
-        </div>
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          startIndex={startIndex}
+          endIndex={endIndex}
+          totalItems={totalItems}
+          itemLabel="students"
+          onPageChange={(page) => dispatch(setStudentPage(page))}
+          onPrevious={() => dispatch(setStudentPage(currentPage - 1))}
+          onNext={() => dispatch(setStudentPage(currentPage + 1))}
+          canPreviousPage={canPreviousPage}
+          canNextPage={canNextPage}
+        />
       </div>
 
       {showModal && (

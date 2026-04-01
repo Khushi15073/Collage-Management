@@ -3,11 +3,28 @@ import { PermissionFactory } from "../factory/permission.factory";
 import { CreatePermissionDTO, UpdatePermissionDTO } from "../interfaces/permission.interface";
 import { AppError } from "../utility/errorClass";
 import ResponseHandler from "../utility/responseHandler";
+import {
+    DEFAULT_PERMISSIONS,
+    formatPermissionLabel,
+    getPermissionDefinition,
+} from "../constants/accessControl";
 
 
 export class PermissionService {
 
     private permissionFactory = new PermissionFactory()
+
+    private mapPermissionWithMetadata(permission: any) {
+        const definition = getPermissionDefinition(permission.name);
+
+        return {
+            _id: permission._id,
+            name: permission.name,
+            label: definition?.label || formatPermissionLabel(permission.name),
+            section: definition?.section || "Custom",
+            description: definition?.description || permission.description || "",
+        };
+    }
 
     public async createPermission(permissionData: CreatePermissionDTO) {
         try {
@@ -27,17 +44,48 @@ export class PermissionService {
     public async getAllPermission() {
         try {
             const permissions = await this.permissionFactory.getAllPermission();
-            if (!permissions || permissions.length === 0) {
-                throw AppError.notFound("no permission")
-            }
+            const normalizedPermissions = permissions
+                .map((permission) => this.mapPermissionWithMetadata(permission))
+                .filter((permission) => getPermissionDefinition(permission.name) != null);
             return ResponseHandler.sendResponse(
                 ResponseCodes.OK,
-                "permission updated successfully",
-                permissions
+                "permission fetched successfully",
+                normalizedPermissions
             )
 
         } catch (error) {
             throw error
+        }
+    }
+
+    public async syncDefaultPermissions() {
+        try {
+            const existingPermissions = await this.permissionFactory.getAllPermission();
+            const existingNames = new Set(existingPermissions.map((permission: any) => permission.name));
+
+            for (const permission of DEFAULT_PERMISSIONS) {
+                if (existingNames.has(permission.key)) {
+                    continue;
+                }
+
+                await this.permissionFactory.createPermission({
+                    name: permission.key,
+                    description: permission.description,
+                });
+            }
+
+            const refreshedPermissions = await this.permissionFactory.getAllPermission();
+            const normalizedPermissions = refreshedPermissions
+                .map((permission) => this.mapPermissionWithMetadata(permission))
+                .filter((permission) => getPermissionDefinition(permission.name) != null);
+
+            return ResponseHandler.sendResponse(
+                ResponseCodes.OK,
+                "default permissions synced successfully",
+                normalizedPermissions
+            );
+        } catch (error) {
+            throw error;
         }
     }
 

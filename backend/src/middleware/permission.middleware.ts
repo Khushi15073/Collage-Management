@@ -63,6 +63,10 @@ async function resolveTargetRoleName(req: Request, action: UserAction) {
 }
 
 function buildUserPermissionName(action: UserAction, roleName: string | null) {
+  if (roleName === "admin") {
+    return `${action}_admins`;
+  }
+
   if (roleName === "student") {
     return `${action}_students`;
   }

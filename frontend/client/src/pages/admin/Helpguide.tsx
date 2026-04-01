@@ -1,160 +1,151 @@
 import { Shield, User, GraduationCap } from "lucide-react";
 
+const accessCards = [
+  {
+    title: "Administrator Access",
+    badge: "Admin",
+    badgeClassName: "bg-red-500",
+    iconClassName: "bg-red-50 text-red-500",
+    icon: Shield,
+    demo: "admin@college.edu / admin123",
+    features: [
+      "Full system access",
+      "Manage students and faculty",
+      "Configure courses",
+      "Set role permissions",
+      "Generate reports",
+      "View all analytics",
+    ],
+  },
+  {
+    title: "Faculty Access",
+    badge: "Faculty",
+    badgeClassName: "bg-blue-500",
+    iconClassName: "bg-blue-50 text-blue-500",
+    icon: User,
+    demo: "faculty@college.edu / faculty123",
+    features: [
+      "View assigned classes",
+      "Access student lists",
+      "Mark attendance",
+      "Manage course activities",
+      "Review student progress",
+      "View class analytics",
+    ],
+  },
+  {
+    title: "Student Access",
+    badge: "Student",
+    badgeClassName: "bg-green-500",
+    iconClassName: "bg-green-50 text-green-500",
+    icon: GraduationCap,
+    demo: "student@college.edu / student123",
+    features: [
+      "View enrolled courses",
+      "Track attendance",
+      "Follow course updates",
+      "Check grades",
+      "View results",
+      "Access course materials",
+    ],
+  },
+];
+
+const featureSections = [
+  {
+    title: "User Interface",
+    items: [
+      "Clean and modern design",
+      "Responsive layout for all devices",
+      "Interactive charts and graphs",
+      "Real-time notifications",
+      "Easy navigation with sidebar",
+      "Search and filter capabilities",
+    ],
+  },
+  {
+    title: "Functionality",
+    items: [
+      "Role-based access control",
+      "CRUD operations for all entities",
+      "Attendance management",
+      "Course and classroom management",
+      "Grade management",
+      "Analytics and reporting",
+    ],
+  },
+];
+
 function HelpGuide() {
   return (
-    <div className="p-8 min-h-screen bg-gray-50">
-
-      {/* ── Page Header ── */}
-      <div className="mb-6">
+    <div className="flex h-full flex-col overflow-hidden bg-gray-50 p-8">
+      <div className="mb-6 shrink-0">
         <h1 className="text-3xl font-bold text-gray-900">Quick Guide</h1>
-        <p className="text-sm text-gray-400 mt-1">Learn how to use the College Management System</p>
+        <p className="mt-1 text-sm text-gray-400">
+          Learn how to use the College Management System
+        </p>
       </div>
 
-      {/* ── Role Access Cards ── */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="min-h-0 flex-1 overflow-auto pr-1">
+        <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {accessCards.map((card) => {
+            const Icon = card.icon;
 
-        {/* Admin Card */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 flex flex-col gap-4">
-          {/* Icon + Badge */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center">
-              <Shield className="w-5 h-5 text-red-500" />
-            </div>
-            <span className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full">Admin</span>
-          </div>
+            return (
+              <div
+                key={card.title}
+                className="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-6"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex h-10 w-10 items-center justify-center rounded-xl ${card.iconClassName}`}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-bold text-white ${card.badgeClassName}`}
+                  >
+                    {card.badge}
+                  </span>
+                </div>
 
-          {/* Title */}
-          <h2 className="text-base font-bold text-gray-900">Administrator Access</h2>
+                <h2 className="text-base font-bold text-gray-900">{card.title}</h2>
 
-          {/* Feature List */}
-          <ul className="space-y-1.5 text-sm text-gray-600 flex-1">
-            <li>• Full system access</li>
-            <li>• Manage students and faculty</li>
-            <li>• Configure courses</li>
-            <li>• Set role permissions</li>
-            <li>• Generate reports</li>
-            <li>• View all analytics</li>
-          </ul>
+                <ul className="flex-1 space-y-1.5 text-sm text-gray-600">
+                  {card.features.map((feature) => (
+                    <li key={feature}>• {feature}</li>
+                  ))}
+                </ul>
 
-          {/* Demo Login */}
-          <div className="bg-gray-50 rounded-xl p-3 mt-2">
-            <p className="text-xs font-semibold text-gray-500 mb-1">Demo Login:</p>
-            <p className="text-xs text-gray-700">admin@college.edu / admin123</p>
-          </div>
+                <div className="mt-2 rounded-xl bg-gray-50 p-3">
+                  <p className="mb-1 text-xs font-semibold text-gray-500">Demo Login:</p>
+                  <p className="text-xs text-gray-700">{card.demo}</p>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
-        {/* Faculty Card */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 flex flex-col gap-4">
-          {/* Icon + Badge */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-              <User className="w-5 h-5 text-blue-500" />
-            </div>
-            <span className="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">Faculty</span>
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-6 text-base font-bold text-gray-800">Key Features</h2>
+
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+            {featureSections.map((section) => (
+              <div key={section.title}>
+                <h3 className="mb-4 text-sm font-bold text-gray-800">{section.title}</h3>
+                <ul className="space-y-3">
+                  {section.items.map((item) => (
+                    <li key={item} className="flex items-center gap-2 text-sm text-gray-600">
+                      <span className="font-semibold text-gray-400">✓</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
-
-          {/* Title */}
-          <h2 className="text-base font-bold text-gray-900">Faculty Access</h2>
-
-          {/* Feature List */}
-          <ul className="space-y-1.5 text-sm text-gray-600 flex-1">
-            <li>• View assigned classes</li>
-            <li>• Access student lists</li>
-            <li>• Mark attendance</li>
-            <li>• Manage course activities</li>
-            <li>• Review student progress</li>
-            <li>• View class analytics</li>
-          </ul>
-
-          {/* Demo Login */}
-          <div className="bg-gray-50 rounded-xl p-3 mt-2">
-            <p className="text-xs font-semibold text-gray-500 mb-1">Demo Login:</p>
-            <p className="text-xs text-gray-700">faculty@college.edu / faculty123</p>
-          </div>
-        </div>
-
-        {/* Student Card */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 flex flex-col gap-4">
-          {/* Icon + Badge */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
-              <GraduationCap className="w-5 h-5 text-green-500" />
-            </div>
-            <span className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">Student</span>
-          </div>
-
-          {/* Title */}
-          <h2 className="text-base font-bold text-gray-900">Student Access</h2>
-
-          {/* Feature List */}
-          <ul className="space-y-1.5 text-sm text-gray-600 flex-1">
-            <li>• View enrolled courses</li>
-            <li>• Track attendance</li>
-            <li>• Follow course updates</li>
-            <li>• Check grades</li>
-            <li>• View results</li>
-            <li>• Access course materials</li>
-          </ul>
-
-          {/* Demo Login */}
-          <div className="bg-gray-50 rounded-xl p-3 mt-2">
-            <p className="text-xs font-semibold text-gray-500 mb-1">Demo Login:</p>
-            <p className="text-xs text-gray-700">student@college.edu / student123</p>
-          </div>
-        </div>
-
-      </div>
-
-      {/* ── Key Features Card ── */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-
-        <h2 className="text-base font-bold text-gray-800 mb-6">Key Features</h2>
-
-        <div className="grid grid-cols-2 gap-8">
-
-          {/* User Interface */}
-          <div>
-            <h3 className="text-sm font-bold text-gray-800 mb-4">User Interface</h3>
-            <ul className="space-y-3">
-              {[
-                "Clean and modern design",
-                "Responsive layout for all devices",
-                "Interactive charts and graphs",
-                "Real-time notifications",
-                "Easy navigation with sidebar",
-                "Search and filter capabilities",
-              ].map((item) => (
-                <li key={item} className="flex items-center gap-2 text-sm text-gray-600">
-                  <span className="text-gray-400 font-semibold">✓</span>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Functionality */}
-          <div>
-            <h3 className="text-sm font-bold text-gray-800 mb-4">Functionality</h3>
-            <ul className="space-y-3">
-              {[
-                "Role-based access control",
-                "CRUD operations for all entities",
-                "Attendance management",
-                "Course and classroom management",
-                "Grade management",
-                "Analytics and reporting",
-              ].map((item) => (
-                <li key={item} className="flex items-center gap-2 text-sm text-gray-600">
-                  <span className="text-gray-400 font-semibold">✓</span>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-
         </div>
       </div>
-
     </div>
   );
 }

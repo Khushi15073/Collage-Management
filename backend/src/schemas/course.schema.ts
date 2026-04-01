@@ -11,6 +11,8 @@ export interface ICourse {
   enrolled:   number;
   total:      number;
   status:     "Active" | "Inactive" | "Full";
+  sourceDegree?: Types.ObjectId | null;
+  sourceSectionKey?: string | null;
 }
 
 const courseSchema = new mongoose.Schema<ICourse>(
@@ -64,6 +66,16 @@ const courseSchema = new mongoose.Schema<ICourse>(
       type:    String,
       enum:    ["Active", "Inactive", "Full"],
       default: "Active",
+    },
+    sourceDegree: {
+      type: Schema.Types.ObjectId,
+      ref: "Degree",
+      default: null,
+    },
+    sourceSectionKey: {
+      type: String,
+      default: null,
+      trim: true,
     },
   },
   { timestamps: true }

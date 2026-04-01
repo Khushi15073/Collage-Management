@@ -12,6 +12,30 @@ class CourseService {
     constructor() {
         this.courseFactory = new course_factory_1.CourseFactory();
     }
+    normalizeSchedule(schedule) {
+        if (typeof schedule !== "string") {
+            return "";
+        }
+        return schedule.trim().replace(/\s+/g, " ");
+    }
+    normalizeInstructorId(instructor) {
+        if (typeof instructor === "string") {
+            return instructor.trim();
+        }
+        if (instructor && typeof instructor === "object" && typeof instructor._id === "string") {
+            return instructor._id;
+        }
+        return "";
+    }
+    async ensureFacultyScheduleAvailable(instructorId, schedule, excludeCourseId) {
+        if (!instructorId || !schedule) {
+            return;
+        }
+        const conflictingCourse = await this.courseFactory.findFacultyScheduleConflict(instructorId, schedule, excludeCourseId);
+        if (conflictingCourse) {
+            throw errorClass_1.AppError.conflict(`This faculty is already assigned  for the same schedule`);
+        }
+    }
     normalizeStudentIds(studentIds) {
         if (!studentIds) {
             return [];
@@ -37,6 +61,8 @@ class CourseService {
     // Validates: code must be unique
     // ─────────────────────────────────────────
     async createCourse(data) {
+        const normalizedSchedule = this.normalizeSchedule(data.schedule);
+        const normalizedInstructorId = this.normalizeInstructorId(data.instructor);
         // ✅ Validation: check required fields
         if (!data.code || !data.name || !data.department || !data.credits || !data.total) {
             throw errorClass_1.AppError.badRequest("code, name, department, credits and total seats are required");
@@ -54,11 +80,14 @@ class CourseService {
         if (data.total <= 0) {
             throw errorClass_1.AppError.badRequest("Total seats must be greater than 0");
         }
+        await this.ensureFacultyScheduleAvailable(normalizedInstructorId, normalizedSchedule);
         const studentIds = this.normalizeStudentIds(data.students);
         const enrollmentData = this.buildEnrollmentData(data.total, studentIds, data.status);
         // ── DB operation via factory ──
         const course = await this.courseFactory.createCourse({
             ...data,
+            schedule: normalizedSchedule,
+            instructor: normalizedInstructorId,
             ...enrollmentData,
         });
         return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.CREATED, "Course created successfully", course);
@@ -93,7 +122,7 @@ class CourseService {
     // Validates: course must exist, code unique if changed
     // ─────────────────────────────────────────
     async updateCourse(id, data) {
-        var _a, _b, _c, _d;
+        var _a, _b, _c, _d, _e, _f;
         // ✅ Validation: course must exist
         const existing = await this.courseFactory.findCourseById(id);
         if (!existing) {
@@ -114,12 +143,17 @@ class CourseService {
         if (data.total !== undefined && data.total <= 0) {
             throw errorClass_1.AppError.badRequest("Total seats must be greater than 0");
         }
-        const nextTotal = (_a = data.total) !== null && _a !== void 0 ? _a : existing.total;
-        const nextStudentIds = this.normalizeStudentIds((_b = data.students) !== null && _b !== void 0 ? _b : (_c = existing.students) === null || _c === void 0 ? void 0 : _c.map((student) => String(student._id || student)));
-        const enrollmentData = this.buildEnrollmentData(nextTotal, nextStudentIds, (_d = data.status) !== null && _d !== void 0 ? _d : existing.status);
+        const nextSchedule = this.normalizeSchedule((_a = data.schedule) !== null && _a !== void 0 ? _a : existing.schedule);
+        const nextInstructorId = this.normalizeInstructorId((_b = data.instructor) !== null && _b !== void 0 ? _b : existing.instructor);
+        await this.ensureFacultyScheduleAvailable(nextInstructorId, nextSchedule, id);
+        const nextTotal = (_c = data.total) !== null && _c !== void 0 ? _c : existing.total;
+        const nextStudentIds = this.normalizeStudentIds((_d = data.students) !== null && _d !== void 0 ? _d : (_e = existing.students) === null || _e === void 0 ? void 0 : _e.map((student) => String(student._id || student)));
+        const enrollmentData = this.buildEnrollmentData(nextTotal, nextStudentIds, (_f = data.status) !== null && _f !== void 0 ? _f : existing.status);
         // ── DB operation via factory ──
         const updated = await this.courseFactory.updateCourseById(id, {
             ...data,
+            schedule: nextSchedule,
+            instructor: nextInstructorId,
             ...enrollmentData,
         });
         return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.OK, "Course updated successfully", updated);

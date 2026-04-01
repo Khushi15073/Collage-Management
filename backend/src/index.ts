@@ -5,6 +5,7 @@ import cors from "cors";
 import express from "express";
 import cookieParser from "cookie-parser";
 import { connectDB } from "./db/connection";
+import { CourseFactory } from "./factory/course.factory";
 import { notFoundMiddleware } from "./middleware/notFound.middleware";
 import { errorMiddleware } from "./middleware/error.middleware";
 
@@ -48,6 +49,7 @@ app.use(errorMiddleware);
 const startServer = async () => {
   try {
     await connectDB();
+    await new CourseFactory().syncCoursesFromDegrees();
 
     app.listen(config.PORT, () => {
       console.log(`Server running on port ${config.PORT}`);

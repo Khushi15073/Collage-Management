@@ -4,6 +4,7 @@ import ResponseHandler from "../utility/responseHandler";
 import { ResponseCodes } from "../enums/responseCodes";
 import { CreateUserDTO, UpdateUserDTO } from "../interfaces/user.interfaces";
 import { IdParam } from "../interfaces/common.interface";
+import { parsePaginationQuery } from "../utility/pagination";
 
 export class UserController {
   private userService = new UserService();
@@ -37,7 +38,20 @@ export class UserController {
     try {
       const roleName =
         typeof req.query.role === "string" ? req.query.role : undefined;
-      const users = await this.userService.getAllUsers(roleName);
+      const search =
+        typeof req.query.search === "string" ? req.query.search : undefined;
+      const { page, limit, skip } = parsePaginationQuery(req.query, {
+        page: 1,
+        limit: 10,
+        maxLimit: 100,
+      });
+      const users = await this.userService.getAllUsers({
+        roleName,
+        search,
+        page,
+        limit,
+        skip,
+      });
       ResponseHandler.handleResponse(res, users);
     } catch (error) {
       const errorResponse = await ResponseHandler.handleError(

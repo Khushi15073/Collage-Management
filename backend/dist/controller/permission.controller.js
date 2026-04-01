@@ -32,6 +32,16 @@ class PermissionController {
             responseHandler_1.default.handleResponse(res, errorResponse);
         }
     }
+    async syncDefaultPermissions(req, res) {
+        try {
+            const permissions = await this.permissionService.syncDefaultPermissions();
+            responseHandler_1.default.handleResponse(res, permissions);
+        }
+        catch (error) {
+            const errorResponse = await responseHandler_1.default.handleError(error instanceof Error ? error : new Error("Unknown error occurred"));
+            responseHandler_1.default.handleResponse(res, errorResponse);
+        }
+    }
     async getPermissionById(req, res) {
         try {
             const permissionId = req.params.id;

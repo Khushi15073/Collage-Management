@@ -37,21 +37,40 @@ class UserFactory {
         }
         return role.name;
     }
-    async findAllUsers(roleName) {
+    async findRoleIdByName(roleName) {
+        const role = await role_schema_1.RoleModel.findOne({ name: roleName });
+        if (!role) {
+            throw errorClass_1.AppError.notFound("Role not found");
+        }
+        return role._id;
+    }
+    async findAllUsers(options) {
+        var _a, _b, _c;
         try {
-            let filter = {};
-            if (roleName) {
-                const role = await role_schema_1.RoleModel.findOne({ name: roleName });
-                if (!role) {
-                    throw errorClass_1.AppError.notFound("Role not found");
-                }
-                filter = { role: role._id };
+            const filter = {};
+            if (options === null || options === void 0 ? void 0 : options.roleId) {
+                filter.role = options.roleId;
             }
-            const users = await user_schema_1.default.find(filter).populate("role");
-            if (users.length === 0) {
-                throw errorClass_1.AppError.notFound("No users found");
+            const normalizedSearch = (_a = options === null || options === void 0 ? void 0 : options.search) === null || _a === void 0 ? void 0 : _a.trim();
+            if (normalizedSearch) {
+                filter.$or = [
+                    { name: { $regex: normalizedSearch, $options: "i" } },
+                    { email: { $regex: normalizedSearch, $options: "i" } },
+                    { phoneNumber: { $regex: normalizedSearch, $options: "i" } },
+                    { gender: { $regex: normalizedSearch, $options: "i" } },
+                ];
             }
-            return users;
+            const skip = (_b = options === null || options === void 0 ? void 0 : options.skip) !== null && _b !== void 0 ? _b : 0;
+            const limit = (_c = options === null || options === void 0 ? void 0 : options.limit) !== null && _c !== void 0 ? _c : 10;
+            const [users, totalItems] = await Promise.all([
+                user_schema_1.default.find(filter)
+                    .sort({ createdAt: -1, _id: -1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .populate("role"),
+                user_schema_1.default.countDocuments(filter),
+            ]);
+            return { users, totalItems };
         }
         catch (error) {
             throw error;

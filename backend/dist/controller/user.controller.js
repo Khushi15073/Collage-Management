@@ -7,6 +7,7 @@ exports.UserController = void 0;
 const user_service_1 = require("../services/user.service");
 const responseHandler_1 = __importDefault(require("../utility/responseHandler"));
 const responseCodes_1 = require("../enums/responseCodes");
+const pagination_1 = require("../utility/pagination");
 class UserController {
     constructor() {
         this.userService = new user_service_1.UserService();
@@ -35,7 +36,19 @@ class UserController {
     async getAllUsers(req, res) {
         try {
             const roleName = typeof req.query.role === "string" ? req.query.role : undefined;
-            const users = await this.userService.getAllUsers(roleName);
+            const search = typeof req.query.search === "string" ? req.query.search : undefined;
+            const { page, limit, skip } = (0, pagination_1.parsePaginationQuery)(req.query, {
+                page: 1,
+                limit: 10,
+                maxLimit: 100,
+            });
+            const users = await this.userService.getAllUsers({
+                roleName,
+                search,
+                page,
+                limit,
+                skip,
+            });
             responseHandler_1.default.handleResponse(res, users);
         }
         catch (error) {

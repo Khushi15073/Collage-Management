@@ -1,7 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useDashboardSearch } from "../context/DashboardSearchContext";
+import PaginationControls from "./ui/PaginationControls";
+import { usePagination } from "../hooks/usePagination";
+import StatsStrip from "./StatsStrip";
 
 const BASE_URL = "http://localhost:8000";
 
@@ -28,10 +32,10 @@ type FacultyDashboardSummary = {
 };
 
 const statCards = [
-  { key: "totalCourses", icon: "📖", label: "My Courses", color: "bg-blue-500" },
-  { key: "totalStudents", icon: "👥", label: "Total Students", color: "bg-emerald-500" },
-  { key: "activeCourses", icon: "✅", label: "Active Courses", color: "bg-violet-500" },
-  { key: "availableSeats", icon: "🪑", label: "Available Seats", color: "bg-orange-500" },
+  { key: "totalCourses", label: "My Courses" },
+  { key: "totalStudents", label: "Total Students" },
+  { key: "activeCourses", label: "Active Courses" },
+  { key: "availableSeats", label: "Available Seats" },
 ] as const;
 
 function statusStyles(status: FacultyCourse["status"]) {
@@ -43,6 +47,7 @@ function statusStyles(status: FacultyCourse["status"]) {
 function FacultyDashboard() {
   const navigate = useNavigate();
   const user = useSelector((state: any) => state.auth.user);
+  const { searchQuery } = useDashboardSearch();
 
   const [summary, setSummary] = useState<FacultyDashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -81,10 +86,45 @@ function FacultyDashboard() {
     };
   }, []);
 
-  const courses = summary?.courses || [];
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const courses = useMemo(() => {
+    const allCourses = summary?.courses || [];
+
+    if (!normalizedQuery) {
+      return allCourses;
+    }
+
+    return allCourses.filter((course) =>
+      [
+        course.code,
+        course.name,
+        course.department,
+        course.schedule,
+        course.status,
+        String(course.enrolled),
+        String(course.total),
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedQuery)
+    );
+  }, [normalizedQuery, summary?.courses]);
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    totalItems,
+    paginatedItems: paginatedCourses,
+    canPreviousPage,
+    canNextPage,
+    setPage,
+    nextPage,
+    previousPage,
+  } = usePagination(courses, 6);
 
   return (
-    <main className="flex-1 overflow-y-auto p-6 space-y-6">
+    <main className="flex h-full min-h-0 flex-col overflow-hidden bg-gray-50 p-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-800">Faculty Dashboard</h1>
         <p className="text-sm text-gray-400 mt-0.5">Welcome back, {user?.name || "Faculty"}</p>
@@ -96,30 +136,22 @@ function FacultyDashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        {statCards.map((card) => (
-          <div key={card.key} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div className={`w-12 h-12 ${card.color} rounded-xl flex items-center justify-center text-xl`}>
-              {card.icon}
-            </div>
-            <div>
-              <p className="text-xs text-gray-400 font-medium">{card.label}</p>
-              <p className="text-2xl font-bold text-gray-800">
-                {loading ? "..." : summary?.counts[card.key] ?? 0}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
+      <StatsStrip
+        items={statCards.map((card) => ({
+          title: card.label,
+          value: String(summary?.counts[card.key] ?? 0),
+          loading,
+        }))}
+      />
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <div className="mt-4 grid min-h-0 flex-1 grid-cols-1 gap-6 xl:grid-cols-3">
+        <div className="xl:col-span-2 flex min-h-0 flex-col rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
           <div className="mb-4">
             <h2 className="text-base font-bold text-gray-800">My Classes</h2>
             <p className="text-sm text-gray-400 mt-1">Courses assigned from your backend data</p>
           </div>
 
-          <div className="space-y-3">
+          <div className="min-h-0 flex-1 space-y-3 overflow-auto">
             {loading && (
               <div className="rounded-xl border border-gray-100 p-4 text-sm text-gray-400">
                 Loading classes...
@@ -127,7 +159,7 @@ function FacultyDashboard() {
             )}
 
             {!loading &&
-              courses.map((course) => (
+              paginatedCourses.map((course) => (
                 <div
                   key={course._id}
                   className="rounded-xl border border-gray-100 p-4 transition-all hover:border-gray-200 hover:bg-gray-50"
@@ -143,16 +175,10 @@ function FacultyDashboard() {
                   </div>
                   <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 mb-3">
                     <span>{course.department}</span>
-                    <span>👥 {course.enrolled} students</span>
-                    <span>🕐 {course.schedule}</span>
+                    <span>{course.enrolled} students</span>
+                    <span>{course.schedule}</span>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => navigate("/faculty/classes")}
-                      className="px-4 py-1.5 text-xs font-semibold border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      View Details
-                    </button>
+                  <div className="flex">
                     <button
                       onClick={() => navigate("/faculty/attendance")}
                       className="px-4 py-1.5 text-xs font-semibold bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors"
@@ -163,12 +189,29 @@ function FacultyDashboard() {
                 </div>
               ))}
 
-            {!loading && courses.length === 0 && (
+            {!loading && paginatedCourses.length === 0 && (
               <div className="rounded-xl border border-gray-100 p-4 text-sm text-gray-400">
-                No courses are assigned to you yet.
+                {normalizedQuery ? "No classes match your search." : "No courses are assigned to you yet."}
               </div>
             )}
           </div>
+
+          {!loading && courses.length > 0 && (
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              startIndex={startIndex}
+              endIndex={endIndex}
+              totalItems={totalItems}
+              itemLabel="classes"
+              onPageChange={setPage}
+              onPrevious={previousPage}
+              onNext={nextPage}
+              canPreviousPage={canPreviousPage}
+              canNextPage={canNextPage}
+              className="mt-4 px-0"
+            />
+          )}
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">

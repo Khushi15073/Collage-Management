@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Pencil, Trash2, Search, Plus, BookOpen, Users, Armchair } from "lucide-react";
+import { Pencil, Trash2, Plus } from "lucide-react";
 import {
   clearCourseError,
   createCourse,
@@ -13,6 +13,21 @@ import { fetchFaculty } from "../../features/facultySlice";
 import type { Faculty } from "../../features/facultySlice";
 import { fetchStudents } from "../../features/studentSlice";
 import type { Student } from "../../features/studentSlice";
+import StatsStrip from "../../components/StatsStrip";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/Table";
+import PaginationControls from "../../components/ui/PaginationControls";
+import { usePagination } from "../../hooks/usePagination";
+import { useDashboardSearch } from "../../context/DashboardSearchContext";
+import { matchesSearchQuery } from "../../utils/search";
+import SearchField from "../../components/ui/SearchField";
 
 const emptyForm = {
   code: "",
@@ -39,6 +54,7 @@ const scheduleOptions = [
 
 function ManageCourses() {
   const dispatch = useDispatch();
+  const { searchQuery } = useDashboardSearch();
 
   const courses = useSelector((state: any) => state.courses.courses) as Course[];
   const loading = useSelector((state: any) => state.courses.loading) as boolean;
@@ -51,7 +67,6 @@ function ManageCourses() {
   const studentsLoading = useSelector((state: any) => state.students.loading) as boolean;
   const studentsError = useSelector((state: any) => state.students.error) as string | null;
 
-  const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editCourse, setEditCourse] = useState<Course | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -71,17 +86,37 @@ function ManageCourses() {
   const totalEnrollments = courses.reduce((sum, course) => sum + course.enrolled, 0);
   const availableSeats = courses.reduce((sum, course) => sum + (course.total - course.enrolled), 0);
 
-  const filteredCourses = courses.filter((course) => {
-    const query = search.toLowerCase();
-    const instructorName = course.instructor?.name?.toLowerCase() || "";
+  const filteredCourses = useMemo(() => {
+    return courses.filter((course) => {
+      const values = [
+        course.code,
+        course.name,
+        course.department,
+        course.instructor?.name || "",
+        course.schedule,
+        course.status,
+        `${course.enrolled}/${course.total}`,
+        String(course.enrolled),
+        String(course.total),
+        String(course.students.length),
+      ];
 
-    return (
-      course.name.toLowerCase().includes(query) ||
-      course.code.toLowerCase().includes(query) ||
-      course.department.toLowerCase().includes(query) ||
-      instructorName.includes(query)
-    );
-  });
+      return matchesSearchQuery(values, searchQuery);
+    });
+  }, [courses, searchQuery]);
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    totalItems,
+    paginatedItems: paginatedCourses,
+    canPreviousPage,
+    canNextPage,
+    setPage,
+    nextPage,
+    previousPage,
+  } = usePagination(filteredCourses, 8);
 
   function resetForm() {
     setForm(emptyForm);
@@ -237,7 +272,7 @@ function ManageCourses() {
   });
 
   return (
-    <div className="p-8 min-h-screen bg-gray-50">
+    <div className="flex h-full flex-col overflow-hidden bg-gray-50 p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Manage Courses</h1>
@@ -257,89 +292,54 @@ function ManageCourses() {
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4">
-          <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center">
-            <BookOpen className="w-7 h-7 text-blue-600" />
-          </div>
-          <div>
-            <p className="text-sm text-gray-400">Total Courses</p>
-            <p className="text-3xl font-bold text-gray-900">{totalCourses}</p>
-          </div>
-        </div>
+      <StatsStrip
+        outerClassName="-mx-8 mb-5 px-8"
+        items={[
+          { title: "Total Courses", value: String(totalCourses), loading },
+          { title: "Total Enrollments", value: String(totalEnrollments), loading },
+          { title: "Available Seats", value: String(availableSeats), loading },
+        ]}
+      />
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4">
-          <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center">
-            <Users className="w-7 h-7 text-green-600" />
-          </div>
-          <div>
-            <p className="text-sm text-gray-400">Total Enrollments</p>
-            <p className="text-3xl font-bold text-gray-900">{totalEnrollments}</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4">
-          <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center">
-            <Armchair className="w-7 h-7 text-purple-600" />
-          </div>
-          <div>
-            <p className="text-sm text-gray-400">Available Seats</p>
-            <p className="text-3xl font-bold text-gray-900">{availableSeats}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-100 px-6 py-4">
           <h2 className="text-base font-semibold text-gray-800">Course List</h2>
-          <div className="relative">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search courses..."
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              className="pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-56 bg-gray-50"
-            />
-          </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Code</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Course Name</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Department</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Instructor</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Credits</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Enrollment</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Students</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Actions</th>
-              </tr>
-            </thead>
+        <TableContainer className="min-h-0 flex-1 overflow-auto">
+          <Table>
+            <TableHead>
+              <TableRow className="border-b border-gray-100">
+                <TableHeader>Code</TableHeader>
+                <TableHeader>Course Name</TableHeader>
+                <TableHeader>Department</TableHeader>
+                <TableHeader>Instructor</TableHeader>
+                <TableHeader>Enrollment</TableHeader>
+                <TableHeader>Students</TableHeader>
+                <TableHeader>Actions</TableHeader>
+              </TableRow>
+            </TableHead>
 
-            <tbody>
+            <TableBody>
               {loading && (
-                <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-400 text-sm">
+                <TableRow>
+                  <TableCell colSpan={7} className="py-12 text-center text-gray-400 text-sm">
                     Loading courses...
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
 
               {!loading &&
-                filteredCourses.map((course) => (
-                  <tr key={course._id} className="border-b border-gray-50 hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 font-bold text-gray-800">{course.code}</td>
-                    <td className="px-6 py-4">
+                paginatedCourses.map((course) => (
+                  <TableRow key={course._id} className="border-b border-gray-50 hover:bg-gray-50 transition">
+                    <TableCell className="font-bold text-gray-800">{course.code}</TableCell>
+                    <TableCell>
                       <p className="font-semibold text-gray-800">{course.name}</p>
                       <p className="text-xs text-gray-400 mt-0.5">{course.schedule}</p>
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">{course.department}</td>
-                    <td className="px-6 py-4 text-gray-600">{course.instructor?.name || "Unassigned"}</td>
-                    <td className="px-6 py-4 text-gray-600">{course.credits}</td>
-                    <td className="px-6 py-4">
+                    </TableCell>
+                    <TableCell className="text-gray-600">{course.department}</TableCell>
+                    <TableCell className="text-gray-600">{course.instructor?.name || "Unassigned"}</TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-2">
                         <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden">
                           <div
@@ -351,9 +351,9 @@ function ManageCourses() {
                           {course.enrolled}/{course.total}
                         </span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">{course.students.length}</td>
-                    <td className="px-6 py-4">
+                    </TableCell>
+                    <TableCell className="text-gray-600">{course.students.length}</TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => openEditModal(course)}
@@ -368,24 +368,34 @@ function ManageCourses() {
                           <Trash2 size={15} />
                         </button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
 
-              {!loading && filteredCourses.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-400 text-sm">
+              {!loading && paginatedCourses.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="py-12 text-center text-gray-400 text-sm">
                     No courses found.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-        <div className="px-6 py-3 border-t border-gray-100 text-xs text-gray-400">
-          Showing {filteredCourses.length} of {courses.length} courses
-        </div>
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          startIndex={startIndex}
+          endIndex={endIndex}
+          totalItems={totalItems}
+          itemLabel="courses"
+          onPageChange={setPage}
+          onPrevious={previousPage}
+          onNext={nextPage}
+          canPreviousPage={canPreviousPage}
+          canNextPage={canNextPage}
+        />
       </div>
 
       {showModal && (
@@ -414,18 +424,6 @@ function ManageCourses() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1">Credits</label>
-                <input
-                  name="credits"
-                  type="number"
-                  min={1}
-                  value={form.credits}
-                  onChange={handleFormChange}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="col-span-2">
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Course Name</label>
                 <input
                   name="name"
@@ -535,11 +533,11 @@ function ManageCourses() {
                     Clear All
                   </button>
                 </div>
-                <input
+                <SearchField
                   value={studentSearch}
-                  onChange={(event) => setStudentSearch(event.target.value)}
+                  onChange={setStudentSearch}
                   placeholder="Search students by name or email"
-                  className="mb-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="mb-3"
                 />
                 <div className="max-h-52 space-y-2 overflow-y-auto rounded-lg border border-gray-200 p-3">
                   {studentsLoading && (

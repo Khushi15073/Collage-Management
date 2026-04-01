@@ -1,1 +1,77 @@
 @import "tailwindcss";
+
+@layer base {
+  :root {
+    --app-font-family: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    --app-font-size: 14px;
+  }
+
+  html {
+    font-size: var(--app-font-size);
+  }
+
+  body {
+    font-family: var(--app-font-family);
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #111827;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* * {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f8fafc;
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  } */
+
+
+  * {
+  scrollbar-width: none;     
+  -ms-overflow-style: none;   
+}
+
+*::-webkit-scrollbar {
+  display: none;             
+}
+  *::-webkit-scrollbar-track {
+    background: #f8fafc;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: #cbd5e1;
+    border: 2px solid #f8fafc;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  .overflow-x-auto > table {
+    min-width: max(100%, 48rem);
+  }
+
+  .table-zebra > tr:nth-child(odd) {
+    background-color: #ffffff;
+  }
+
+  .table-zebra > tr:nth-child(even) {
+    background-color: #f8fafc;
+  }
+
+  .table-zebra > tr:hover {
+    background-color: #eff6ff;
+  }
+}

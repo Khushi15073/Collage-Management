@@ -13,7 +13,7 @@ type RolePermission = {
 // ✅ TypeScript: shape of a Role from your RoleModel
 export type Role = {
   _id: string;
-  name: "admin" | "faculty" | "student";
+  name: string;
   description?: string;
   permissions?: RolePermission[];
 };

@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
+import type { RootState } from "../app/store";
 
 const BASE_URL = "http://localhost:8000";
 
@@ -22,6 +23,11 @@ interface FacultyState {
   faculty: Faculty[];
   loading: boolean;
   error: string | null;
+  currentPage: number;
+  limit: number;
+  totalItems: number;
+  totalPages: number;
+  search: string;
 }
 
 type CreateFacultyResult = {
@@ -34,6 +40,11 @@ const initialState: FacultyState = {
   faculty: [],
   loading: false,
   error: null,
+  currentPage: 1,
+  limit: 10,
+  totalItems: 0,
+  totalPages: 0,
+  search: "",
 };
 
 function normalizeFaculty(user: any): Faculty {
@@ -50,15 +61,55 @@ function normalizeFaculty(user: any): Faculty {
   };
 }
 
-export const fetchFaculty = createAsyncThunk(
+type FetchFacultyArgs = {
+  page?: number;
+  limit?: number;
+  search?: string;
+};
+
+type FetchFacultyResult = {
+  faculty: Faculty[];
+  currentPage: number;
+  limit: number;
+  totalItems: number;
+  totalPages: number;
+  search: string;
+};
+
+export const fetchFaculty = createAsyncThunk<
+  FetchFacultyResult,
+  FetchFacultyArgs | undefined,
+  { state: RootState; rejectValue: string }
+>(
   "faculty/fetchAll",
-  async (_, { rejectWithValue }) => {
+  async (args, { rejectWithValue, getState }) => {
     try {
-      const response = await axios.get(BASE_URL + "/api/user?role=faculty", {
+      const state = getState().faculty;
+      const page = args?.page ?? state.currentPage;
+      const limit = args?.limit ?? state.limit;
+      const search = args?.search ?? state.search;
+
+      const response = await axios.get(BASE_URL + "/api/user", {
+        params: {
+          role: "faculty",
+          page,
+          limit,
+          search: search.trim() || undefined,
+        },
         withCredentials: true,
       });
-      const users = response.data?.data || response.data || [];
-      return users.map(normalizeFaculty);
+      const payload = response.data?.data || {};
+      const users = payload.items || [];
+      const pagination = payload.pagination || {};
+
+      return {
+        faculty: users.map(normalizeFaculty),
+        currentPage: pagination.page ?? page,
+        limit: pagination.limit ?? limit,
+        totalItems: pagination.totalItems ?? users.length,
+        totalPages: pagination.totalPages ?? 0,
+        search,
+      };
     } catch (error: any) {
       return rejectWithValue(
         error.response?.status === 401
@@ -154,15 +205,27 @@ const facultySlice = createSlice({
     clearFacultyError(state) {
       state.error = null;
     },
+    setFacultyPage(state, action: PayloadAction<number>) {
+      state.currentPage = action.payload;
+    },
+    setFacultyLimit(state, action: PayloadAction<number>) {
+      state.limit = action.payload;
+      state.currentPage = 1;
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(fetchFaculty.pending, (state) => {
       state.loading = true;
       state.error = null;
     });
-    builder.addCase(fetchFaculty.fulfilled, (state, action: PayloadAction<Faculty[]>) => {
+    builder.addCase(fetchFaculty.fulfilled, (state, action: PayloadAction<FetchFacultyResult>) => {
       state.loading = false;
-      state.faculty = action.payload;
+      state.faculty = action.payload.faculty;
+      state.currentPage = action.payload.currentPage;
+      state.limit = action.payload.limit;
+      state.totalItems = action.payload.totalItems;
+      state.totalPages = action.payload.totalPages;
+      state.search = action.payload.search;
     });
     builder.addCase(fetchFaculty.rejected, (state, action) => {
       state.loading = false;
@@ -212,5 +275,5 @@ const facultySlice = createSlice({
   },
 });
 
-export const { clearFacultyError } = facultySlice.actions;
+export const { clearFacultyError, setFacultyPage, setFacultyLimit } = facultySlice.actions;
 export default facultySlice.reducer;

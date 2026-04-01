@@ -47,6 +47,9 @@ async function resolveTargetRoleName(req, action) {
     return (targetRole === null || targetRole === void 0 ? void 0 : targetRole.name) || null;
 }
 function buildUserPermissionName(action, roleName) {
+    if (roleName === "admin") {
+        return `${action}_admins`;
+    }
     if (roleName === "student") {
         return `${action}_students`;
     }

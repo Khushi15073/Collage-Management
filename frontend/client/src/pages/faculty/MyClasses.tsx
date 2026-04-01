@@ -1,7 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { BookOpen, Users, Clock, Building2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import PaginationControls from "../../components/ui/PaginationControls";
+import { usePagination } from "../../hooks/usePagination";
+import { useDashboardSearch } from "../../context/DashboardSearchContext";
+import { matchesSearchQuery } from "../../utils/search";
 
 const BASE_URL = "http://localhost:8000";
 
@@ -22,6 +26,7 @@ type FacultyDashboardSummary = {
 
 function MyClasses() {
   const navigate = useNavigate();
+  const { searchQuery } = useDashboardSearch();
   const [classes, setClasses] = useState<FacultyCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,8 +65,32 @@ function MyClasses() {
     };
   }, []);
 
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredClasses = useMemo(() => {
+    return classes.filter((cls) =>
+      matchesSearchQuery(
+        [cls.code, cls.name, cls.department, cls.schedule, cls.status, cls.enrolled, cls.total, `${cls.enrolled}/${cls.total}`],
+        normalizedQuery
+      )
+    );
+  }, [classes, normalizedQuery]);
+
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    totalItems,
+    paginatedItems: paginatedClasses,
+    canPreviousPage,
+    canNextPage,
+    setPage,
+    nextPage,
+    previousPage,
+  } = usePagination(filteredClasses, 6);
+
   return (
-    <div className="p-8 min-h-screen bg-gray-50">
+    <div className="flex h-full flex-col overflow-hidden bg-gray-50 p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">My Classes</h1>
         <p className="text-gray-400 mt-1">Manage your teaching schedule and course details</p>
@@ -79,15 +108,17 @@ function MyClasses() {
         </div>
       )}
 
-      {!loading && classes.length === 0 && (
+      {!loading && filteredClasses.length === 0 && (
         <div className="rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-500">
-          No classes are assigned to you yet.
+          {normalizedQuery ? "No classes match your search." : "No classes are assigned to you yet."}
         </div>
       )}
 
-      {!loading && classes.length > 0 && (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {classes.map((cls) => (
+      {!loading && filteredClasses.length > 0 && (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <div className="min-h-0 flex-1 overflow-auto p-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {paginatedClasses.map((cls) => (
             <div
               key={cls._id}
               className="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-6 transition hover:shadow-md"
@@ -126,10 +157,7 @@ function MyClasses() {
                 </div>
               </div>
 
-              <div className="mt-auto flex gap-2">
-                <button className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-50">
-                  View Details
-                </button>
+              <div className="mt-auto flex">
                 <button
                   onClick={() => navigate("/faculty/attendance")}
                   className="flex-1 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
@@ -138,7 +166,23 @@ function MyClasses() {
                 </button>
               </div>
             </div>
-          ))}
+              ))}
+            </div>
+          </div>
+
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            totalItems={totalItems}
+            itemLabel="classes"
+            onPageChange={setPage}
+            onPrevious={previousPage}
+            onNext={nextPage}
+            canPreviousPage={canPreviousPage}
+            canNextPage={canNextPage}
+          />
         </div>
       )}
     </div>

@@ -16,9 +16,11 @@ import StudentLogin from './pages/StudentLogin';
 
 // ── Admin Pages ──
 import Dashboard        from './components/Dashboard';
+import ManageAdmin      from './pages/admin/ManageAdmin';
 import ManageStudents   from './pages/admin/ManageStudent';
 import ManageFaculty    from './pages/admin/ManageFaculty';
 import ManageCourses    from './pages/admin/ManageCourses';
+import ManageDegrees    from './pages/admin/ManageDegrees';
 import RolesPermissions from './pages/admin/RolesPermissions';
 import HelpGuide        from './pages/admin/Helpguide';
 
@@ -105,9 +107,11 @@ function AppRoutes() {
 
       {/* ── Admin Protected Pages ── */}
       <Route path="/admin/dashboard" element={<ProtectedRoute><AdminLayout><Dashboard /></AdminLayout></ProtectedRoute>} />
+      <Route path="/admins"          element={<ProtectedRoute><AdminLayout><ManageAdmin /></AdminLayout></ProtectedRoute>} />
       <Route path="/students"        element={<ProtectedRoute><AdminLayout><ManageStudents /></AdminLayout></ProtectedRoute>} />
       <Route path="/faculty"         element={<ProtectedRoute><AdminLayout><ManageFaculty /></AdminLayout></ProtectedRoute>} />
       <Route path="/courses"         element={<ProtectedRoute><AdminLayout><ManageCourses /></AdminLayout></ProtectedRoute>} />
+      <Route path="/degrees"         element={<ProtectedRoute><AdminLayout><ManageDegrees /></AdminLayout></ProtectedRoute>} />
       <Route path="/roles"           element={<ProtectedRoute><AdminLayout><RolesPermissions /></AdminLayout></ProtectedRoute>} />
       <Route path="/help"            element={<ProtectedRoute><AdminLayout><HelpGuide /></AdminLayout></ProtectedRoute>} />
 

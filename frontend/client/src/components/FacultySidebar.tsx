@@ -1,11 +1,12 @@
+import { BookOpen, GraduationCap, HelpCircle, LayoutDashboard, ListChecks } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const menuItems = [
-  { icon: "⊞", label: "Dashboard",      path: "/faculty/dashboard"  },
-  { icon: "📚", label: "My Classes",     path: "/faculty/classes"    },
-  { icon: "👤", label: "Student List",   path: "/faculty/students"   },
-  { icon: "✅", label: "Mark Attendance",path: "/faculty/attendance" },
-  { icon: "❓", label: "Help & Guide",   path: "/faculty/help"       },
+  { label: "Dashboard",       icon: LayoutDashboard, path: "/faculty/dashboard"  },
+  { label: "My Classes",      icon: BookOpen,        path: "/faculty/classes"    },
+  { label: "Student List",    icon: GraduationCap,   path: "/faculty/students"   },
+  { label: "Mark Attendance", icon: ListChecks,      path: "/faculty/attendance" },
+  { label: "Help & Guide",    icon: HelpCircle,      path: "/faculty/help"       },
 ];
 
 interface FacultySidebarProps {
@@ -41,18 +42,26 @@ function FacultySidebar({ collapsed, onToggle }: FacultySidebarProps) {
         {menuItems.map((item) => {
           // ✅ Active state based on current URL — not local state
           const isActive = location.pathname === item.path;
+          const Icon = item.icon;
           return (
             <button
               key={item.path}
+              type="button"
               onClick={() => navigate(item.path)}  // ✅ real navigation
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+              title={collapsed ? item.label : undefined}
+              className={`w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
                 isActive
                   ? "bg-blue-600 text-white shadow-sm"
                   : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
               }`}
             >
-              <span className="text-base">{item.icon}</span>
-              {!collapsed && <span>{item.label}</span>}
+              {collapsed ? (
+                <span className="flex justify-center">
+                  <Icon size={16} />
+                </span>
+              ) : (
+                <span>{item.label}</span>
+              )}
             </button>
           );
         })}

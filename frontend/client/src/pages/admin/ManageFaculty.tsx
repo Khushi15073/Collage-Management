@@ -1,15 +1,28 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Pencil, Trash2, Mail, Phone, Search, Plus, RefreshCw, KeyRound } from "lucide-react";
+import { Pencil, Trash2, Mail, Phone, Plus } from "lucide-react";
 import {
   clearFacultyError,
   createFaculty,
   deleteFaculty,
   fetchFaculty,
+  setFacultyLimit,
+  setFacultyPage,
   updateFaculty,
 } from "../../features/facultySlice";
 import type { Faculty } from "../../features/facultySlice";
 import { fetchRoles } from "../../features/roleSlice";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/Table";
+import PaginationControls from "../../components/ui/PaginationControls";
+import { useDashboardSearch } from "../../context/DashboardSearchContext";
 
 const emptyForm = {
   name: "",
@@ -20,41 +33,61 @@ const emptyForm = {
   password: "",
 };
 
-function generatePassword() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789@#$%";
-  let value = "";
-
-  for (let index = 0; index < 12; index += 1) {
-    const randomIndex = Math.floor(Math.random() * alphabet.length);
-    value += alphabet[randomIndex];
-  }
-
-  return value;
-}
-
 function ManageFaculty() {
   const dispatch = useDispatch();
+  const { searchQuery } = useDashboardSearch();
 
   const faculty = useSelector((state: any) => state.faculty.faculty);
   const loading = useSelector((state: any) => state.faculty.loading);
   const error = useSelector((state: any) => state.faculty.error);
+  const currentPage = useSelector((state: any) => state.faculty.currentPage);
+  const limit = useSelector((state: any) => state.faculty.limit);
+  const totalItems = useSelector((state: any) => state.faculty.totalItems);
+  const totalPages = useSelector((state: any) => state.faculty.totalPages);
 
   const roles = useSelector((state: any) => state.roles.roles);
   const rolesLoading = useSelector((state: any) => state.roles.loading);
   const roleError = useSelector((state: any) => state.roles.error);
 
-  const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editFaculty, setEditFaculty] = useState<Faculty | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [emailNotice, setEmailNotice] = useState<{ sent: boolean; message: string } | null>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
+  const previousSearchRef = useRef(searchQuery);
 
   useEffect(() => {
-    dispatch(fetchFaculty() as any);
     if (roles.length === 0) {
       dispatch(fetchRoles() as any);
     }
   }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (previousSearchRef.current !== debouncedSearch) {
+      previousSearchRef.current = debouncedSearch;
+
+      if (currentPage !== 1) {
+        dispatch(setFacultyPage(1));
+        return;
+      }
+    }
+
+    dispatch(
+      fetchFaculty({
+        page: currentPage,
+        limit,
+        search: debouncedSearch,
+      }) as any
+    );
+  }, [currentPage, debouncedSearch, dispatch, limit]);
 
   const facultyRoleId = useMemo(() => {
     const facultyRole = roles.find((role: any) => role.name === "faculty");
@@ -96,13 +129,6 @@ function ManageFaculty() {
     resetForm();
   }
 
-  function handleGeneratePassword() {
-    setForm((current) => ({
-      ...current,
-      password: generatePassword(),
-    }));
-  }
-
   async function handleSave() {
     if (
       form.name === "" ||
@@ -131,6 +157,13 @@ function ManageFaculty() {
       );
 
       if (updateFaculty.fulfilled.match(result)) {
+        dispatch(
+          fetchFaculty({
+            page: currentPage,
+            limit,
+            search: debouncedSearch,
+          }) as any
+        );
         closeModal();
       }
       return;
@@ -154,6 +187,14 @@ function ManageFaculty() {
           ? `Credentials were emailed to ${form.email}.`
           : result.payload.emailError || "Faculty created, but email could not be sent.",
       });
+      dispatch(setFacultyPage(1));
+      dispatch(
+        fetchFaculty({
+          page: 1,
+          limit,
+          search: debouncedSearch,
+        }) as any
+      );
       closeModal();
     }
   }
@@ -164,7 +205,12 @@ function ManageFaculty() {
       return;
     }
 
-    dispatch(deleteFaculty(id) as any);
+    const result = await dispatch(deleteFaculty(id) as any);
+
+    if (deleteFaculty.fulfilled.match(result)) {
+      const nextPage = faculty.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage;
+      dispatch(setFacultyPage(nextPage));
+    }
   }
 
   function handleFormChange(
@@ -180,23 +226,18 @@ function ManageFaculty() {
     }
   }
 
-  const filteredFaculty = faculty.filter((item: Faculty) => {
-    const query = search.toLowerCase();
-    return (
-      item.name.toLowerCase().includes(query) ||
-      item.email.toLowerCase().includes(query) ||
-      item.phoneNumber.toLowerCase().includes(query)
-    );
-  });
-
   const pageError = error || roleError;
   const isSessionError =
     pageError === "Session expired. Please log in again." ||
     pageError === "Unauthorized" ||
     pageError === "Invalid token";
+  const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * limit + 1;
+  const endIndex = totalItems === 0 ? 0 : startIndex + faculty.length - 1;
+  const canPreviousPage = currentPage > 1;
+  const canNextPage = totalPages > 0 && currentPage < totalPages;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="flex h-full flex-col overflow-hidden bg-gray-50 p-8">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Manage Faculty</h1>
@@ -225,54 +266,64 @@ function ManageFaculty() {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="text-base font-semibold text-gray-800">Faculty List</h2>
-          <div className="relative">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search faculty..."
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              className="w-56 rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-gray-800">Faculty List</h2>
+            <p className="mt-1 text-sm text-gray-400">
+              Page {totalPages === 0 ? 0 : currentPage} of {totalPages}
+            </p>
           </div>
+
+          <label className="flex items-center gap-2 text-sm text-gray-500">
+            <span>Rows</span>
+            <select
+              value={limit}
+              onChange={(event) => dispatch(setFacultyLimit(Number(event.target.value)))}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {[10, 20, 50, 100].map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
-        <div className="overflow-x-auto">
+        <TableContainer className="min-h-0 flex-1 overflow-auto">
           {loading && faculty.length === 0 ? (
             <div className="py-16 text-center text-sm text-gray-400">Loading faculty...</div>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">Contact</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">Gender</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">Role</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredFaculty.map((item: Faculty) => (
-                  <tr key={item._id} className="border-b border-gray-50 transition hover:bg-gray-50">
-                    <td className="px-6 py-4 font-medium text-gray-800">{item.name}</td>
-                    <td className="px-6 py-4">
+            <Table>
+              <TableHead>
+                <TableRow className="border-b border-gray-100 bg-gray-50">
+                  <TableHeader>Name</TableHeader>
+                  <TableHeader>Contact</TableHeader>
+                  <TableHeader>Gender</TableHeader>
+                  <TableHeader>Role</TableHeader>
+                  <TableHeader>Actions</TableHeader>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {faculty.map((item: Faculty) => (
+                  <TableRow key={item._id} className="border-b border-gray-50 transition hover:bg-gray-50">
+                    <TableCell className="font-medium text-gray-800">{item.name}</TableCell>
+                    <TableCell>
                       <div className="mb-1 flex items-center gap-1.5 text-xs text-gray-500">
                         <Mail size={11} className="text-gray-400" /> {item.email}
                       </div>
                       <div className="flex items-center gap-1.5 text-xs text-gray-500">
                         <Phone size={11} className="text-gray-400" /> {item.phoneNumber}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 capitalize text-gray-600">{item.gender}</td>
-                    <td className="px-6 py-4">
+                    </TableCell>
+                    <TableCell className="capitalize text-gray-600">{item.gender}</TableCell>
+                    <TableCell>
                       <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold capitalize text-blue-700">
                         {item.role?.name || "faculty"}
                       </span>
-                    </td>
-                    <td className="px-6 py-4">
+                    </TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => openEditModal(item)}
@@ -287,25 +338,35 @@ function ManageFaculty() {
                           <Trash2 size={15} />
                         </button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
 
-                {filteredFaculty.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-sm text-gray-400">
+                {faculty.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-12 text-center text-sm text-gray-400">
                       {pageError ? "Unable to load faculty members." : "No faculty members found."}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           )}
-        </div>
+        </TableContainer>
 
-        <div className="border-t border-gray-100 px-6 py-3 text-xs text-gray-400">
-          Showing {filteredFaculty.length} of {faculty.length} faculty members
-        </div>
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          startIndex={startIndex}
+          endIndex={endIndex}
+          totalItems={totalItems}
+          itemLabel="faculty members"
+          onPageChange={(page) => dispatch(setFacultyPage(page))}
+          onPrevious={() => dispatch(setFacultyPage(currentPage - 1))}
+          onNext={() => dispatch(setFacultyPage(currentPage + 1))}
+          canPreviousPage={canPreviousPage}
+          canNextPage={canNextPage}
+        />
       </div>
 
       {showModal && (
@@ -407,27 +468,14 @@ function ManageFaculty() {
                 <label className="mb-1 block text-sm font-medium text-gray-700">
                   {editFaculty ? "New Password" : "Password"}
                 </label>
-                <div className="flex gap-2">
-                  <input
-                    name="password"
-                    type="text"
-                    value={form.password}
-                    onChange={handleFormChange}
-                    placeholder={editFaculty ? "Leave blank to keep current" : "Generate or enter a password"}
-                    className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleGeneratePassword}
-                    className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
-                  >
-                    <RefreshCw size={14} /> Generate
-                  </button>
-                </div>
-                <p className="mt-2 flex items-center gap-1.5 text-xs text-gray-400">
-                  <KeyRound size={12} />
-                  The generated password will be emailed to the faculty member after creation.
-                </p>
+                <input
+                  name="password"
+                  type="text"
+                  value={form.password}
+                  onChange={handleFormChange}
+                  placeholder={editFaculty ? "Leave blank to keep current" : "Enter a password"}
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
             </div>
 

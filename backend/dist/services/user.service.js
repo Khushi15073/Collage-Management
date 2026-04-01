@@ -61,13 +61,32 @@ class UserService {
             throw error;
         }
     }
-    async getAllUsers(roleName) {
+    async getAllUsers(options) {
+        var _a, _b, _c;
         try {
-            const users = await this.userFactory.findAllUsers(roleName);
-            if (users == null || users.length === 0) {
-                throw errorClass_1.AppError.notFound("no users");
+            let roleId;
+            if (options === null || options === void 0 ? void 0 : options.roleName) {
+                roleId = String(await this.userFactory.findRoleIdByName(options.roleName));
             }
-            return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.OK, "User fetched successfully", users);
+            const page = (_a = options === null || options === void 0 ? void 0 : options.page) !== null && _a !== void 0 ? _a : 1;
+            const limit = (_b = options === null || options === void 0 ? void 0 : options.limit) !== null && _b !== void 0 ? _b : 10;
+            const skip = (_c = options === null || options === void 0 ? void 0 : options.skip) !== null && _c !== void 0 ? _c : 0;
+            const { users, totalItems } = await this.userFactory.findAllUsers({
+                roleId,
+                search: options === null || options === void 0 ? void 0 : options.search,
+                skip,
+                limit,
+            });
+            const pagination = {
+                page,
+                limit,
+                totalItems,
+                totalPages: totalItems === 0 ? 0 : Math.ceil(totalItems / limit),
+            };
+            return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.OK, "User fetched successfully", {
+                items: users,
+                pagination,
+            });
         }
         catch (error) {
             throw error;

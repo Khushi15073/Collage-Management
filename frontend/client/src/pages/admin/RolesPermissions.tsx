@@ -1,18 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Shield, Check } from "lucide-react";
+import { Check, Plus } from "lucide-react";
 import { fetchRoles, updateRolePermissions } from "../../features/roleSlice";
 import type { Role } from "../../features/roleSlice";
-import { syncDefaultPermissions } from "../../features/permissionSlice";
+import { createPermission, syncDefaultPermissions } from "../../features/permissionSlice";
 import type { Permission } from "../../features/permissionSlice";
-import { permissionGroups } from "./permissionCatalog";
+import StatsStrip from "../../components/StatsStrip";
+import { useDashboardSearch } from "../../context/DashboardSearchContext";
 
 function formatRoleName(roleName: string) {
   return roleName.charAt(0).toUpperCase() + roleName.slice(1);
 }
 
+const HIDDEN_PERMISSION_SECTIONS = new Set(["Reports", "Custom"]);
+const HIDDEN_PERMISSION_NAMES = new Set([
+  "view_reports",
+  "create_reports",
+  "export_reports",
+]);
+
 function RolesPermissions() {
   const dispatch = useDispatch();
+  const { searchQuery } = useDashboardSearch();
 
   const roles = useSelector((state: any) => state.roles.roles) as Role[];
   const rolesLoading = useSelector((state: any) => state.roles.loading) as boolean;
@@ -25,6 +34,8 @@ function RolesPermissions() {
   const [activeRoleId, setActiveRoleId] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState(false);
+  const [newPermissionName, setNewPermissionName] = useState("");
+  const [newPermissionDescription, setNewPermissionDescription] = useState("");
 
   useEffect(() => {
     dispatch(fetchRoles() as any);
@@ -48,25 +59,77 @@ function RolesPermissions() {
     return roles.find((role) => role._id === activeRoleId) || null;
   }, [roles, activeRoleId]);
 
+  const visiblePermissions = useMemo(() => {
+    return permissions.filter((permission) => {
+      if (HIDDEN_PERMISSION_SECTIONS.has(permission.section)) {
+        return false;
+      }
+
+      if (HIDDEN_PERMISSION_NAMES.has(permission.name)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [permissions]);
+
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredPermissionGroups = useMemo(() => {
+    const groupedPermissions = visiblePermissions.reduce<Record<string, Permission[]>>((accumulator, permission) => {
+      const sectionName = permission.section || "Custom";
+      if (!accumulator[sectionName]) {
+        accumulator[sectionName] = [];
+      }
+      accumulator[sectionName].push(permission);
+      return accumulator;
+    }, {});
+
+    const groups = Object.entries(groupedPermissions).map(([section, items]) => ({
+      section,
+      permissions: items.sort((left, right) => left.label.localeCompare(right.label)),
+    }));
+
+    if (!normalizedQuery) {
+      return groups;
+    }
+
+    return groups
+      .map((group) => ({
+        ...group,
+        permissions: group.permissions.filter((permission) =>
+          [
+            group.section,
+            permission.name,
+            permission.label,
+            permission.description,
+            activeRole?.name || "",
+          ]
+            .join(" ")
+            .toLowerCase()
+            .includes(normalizedQuery)
+        ),
+      }))
+      .filter((group) => group.permissions.length > 0);
+  }, [activeRole?.name, normalizedQuery, visiblePermissions]);
+
   useEffect(() => {
     if (activeRole == null) {
       return;
     }
 
-    const nextState = permissionGroups
-      .flatMap((group) => group.permissions)
+    const nextState = visiblePermissions
       .reduce<Record<string, boolean>>((accumulator, permission) => {
-        const permissionId = permissionIdByName[permission.key];
+        const permissionId = permissionIdByName[permission.name];
         const hasPermission = activeRole.permissions?.some(
           (rolePermission) => rolePermission._id === permissionId
         );
 
-        accumulator[permission.key] = Boolean(hasPermission);
+        accumulator[permission.name] = Boolean(hasPermission);
         return accumulator;
       }, {});
 
     setSelectedPermissions(nextState);
-  }, [activeRole, permissionIdByName]);
+  }, [activeRole, permissionIdByName, visiblePermissions]);
 
   function togglePermission(permissionKey: string) {
     setSelectedPermissions((current) => ({
@@ -76,7 +139,8 @@ function RolesPermissions() {
   }
 
   function countOn(role: Role) {
-    return role.permissions?.length || 0;
+    const visiblePermissionNames = new Set(visiblePermissions.map((permission) => permission.name));
+    return (role.permissions || []).filter((permission) => visiblePermissionNames.has(permission.name)).length;
   }
 
   async function handleSave() {
@@ -102,12 +166,31 @@ function RolesPermissions() {
     }
   }
 
+  async function handleCreatePermission() {
+    if (newPermissionName.trim() === "") {
+      return;
+    }
+
+    const normalizedName = newPermissionName.trim().toLowerCase().replace(/\s+/g, "_");
+    const result = await dispatch(
+      createPermission({
+        name: normalizedName,
+        description: newPermissionDescription.trim() || undefined,
+      }) as any
+    );
+
+    if (createPermission.fulfilled.match(result)) {
+      setNewPermissionName("");
+      setNewPermissionDescription("");
+    }
+  }
+
   const pageError = rolesError || permissionsError;
   const loading = rolesLoading || permissionsLoading;
 
   return (
-    <div className="p-8 min-h-screen bg-gray-50">
-      <div className="flex items-center justify-between mb-6">
+    <div className="flex h-full flex-col overflow-y-auto bg-gray-50 p-8">
+      <div className="mb-6 flex shrink-0 items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Role & Permissions</h1>
           <p className="text-sm text-gray-400 mt-1">Manage access control for different user roles</p>
@@ -128,47 +211,65 @@ function RolesPermissions() {
       )}
 
       {pageError && (
-        <div className="mb-6 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mb-6 shrink-0 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
           {pageError}
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        {roles.map((role, index) => {
-          const cardStyles = [
-            "bg-red-100 text-red-500",
-            "bg-blue-100 text-blue-500",
-            "bg-green-100 text-green-500",
-          ];
+      <StatsStrip
+        outerClassName="-mx-8 mb-5 px-8"
+        items={roles.map((role) => ({
+          title: formatRoleName(role.name),
+          value: String(countOn(role)),
+          loading,
+        }))}
+      />
 
-          return (
-            <div key={role._id} className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4">
-              <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${cardStyles[index] || "bg-gray-100 text-gray-500"}`}>
-                <Shield className="w-7 h-7" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-400">{formatRoleName(role.name)}</p>
-                <p className="text-3xl font-bold text-gray-900">{countOn(role)}</p>
-                <p className="text-xs text-gray-400">permissions</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
+      <div className="flex flex-col rounded-2xl border border-gray-200 bg-white shadow-sm">
         <div className="px-6 py-5 border-b border-gray-100">
           <h2 className="text-base font-semibold text-gray-800">Configure Permissions</h2>
-          <p className="text-sm text-gray-400 mt-0.5">Enable or disable permissions for each role</p>
+        </div>
+
+        <div className="shrink-0 border-b border-gray-100 px-6 py-5">
+          <div className="grid gap-4 lg:grid-cols-[1.2fr_2fr_auto]">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Permission Key</label>
+              <input
+                value={newPermissionName}
+                onChange={(event) => setNewPermissionName(event.target.value)}
+                placeholder="e.g. approve_budget"
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Description</label>
+              <input
+                value={newPermissionDescription}
+                onChange={(event) => setNewPermissionDescription(event.target.value)}
+                placeholder="Describe what this permission allows"
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex items-end">
+              <button
+                type="button"
+                onClick={handleCreatePermission}
+                disabled={loading || newPermissionName.trim() === ""}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Plus size={15} /> Create Permission
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="px-6 pt-5">
-          <div className="flex bg-gray-100 rounded-xl p-1">
+          <div className="flex min-w-max overflow-x-auto rounded-xl bg-gray-100 p-1">
             {roles.map((role) => (
               <button
                 key={role._id}
                 onClick={() => setActiveRoleId(role._id)}
-                className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition ${
+                className={`min-w-[140px] flex-1 py-2.5 rounded-lg text-sm font-semibold transition ${
                   activeRoleId === role._id
                     ? "bg-white text-gray-900 shadow-sm"
                     : "text-gray-500 hover:text-gray-700"
@@ -186,16 +287,16 @@ function RolesPermissions() {
           )}
 
           {!loading &&
-            permissionGroups.map((group) => (
+            filteredPermissionGroups.map((group) => (
               <div key={group.section}>
                 <h3 className="text-base font-bold text-gray-800 mb-3">{group.section}</h3>
                 <div className="space-y-2">
                   {group.permissions.map((permission) => {
-                    const isOn = selectedPermissions[permission.key] || false;
+                    const isOn = selectedPermissions[permission.name] || false;
 
                     return (
                       <div
-                        key={permission.key}
+                        key={permission._id}
                         className="flex items-center justify-between border border-gray-100 rounded-xl px-5 py-4 hover:bg-gray-50 transition"
                       >
                         <div>
@@ -204,7 +305,7 @@ function RolesPermissions() {
                         </div>
 
                         <button
-                          onClick={() => togglePermission(permission.key)}
+                          onClick={() => togglePermission(permission.name)}
                           className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
                             isOn ? "bg-green-500" : "bg-gray-300"
                           }`}
@@ -221,6 +322,10 @@ function RolesPermissions() {
                 </div>
               </div>
             ))}
+
+          {!loading && filteredPermissionGroups.length === 0 && (
+            <p className="text-sm text-gray-400">No permissions match your search.</p>
+          )}
         </div>
       </div>
     </div>

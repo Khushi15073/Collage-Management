@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { RoleModel } from "../schemas/role.schema";
 import dotenv from "dotenv";
 import { connectDB } from "../db/connection";
+import { SYSTEM_ROLES } from "../constants/accessControl";
 
 dotenv.config();
 
@@ -11,22 +12,7 @@ const seedRoles = async () => {
      await   connectDB()
         console.log("✅ DB Connected");
 
-        const roles = [
-            {
-                name: "admin",
-                description: "Full access to all features",
-            },
-            {
-                name: "faculty",
-                description: "Access to manage students and courses",
-            },
-            {
-                name: "student",
-                description: "Access to view courses and results",
-            },
-        ];
-
-        for (const role of roles) {
+        for (const role of SYSTEM_ROLES) {
             await RoleModel.findOneAndUpdate(
                 { name: role.name },        // find by name
                 { ...role },                // update data

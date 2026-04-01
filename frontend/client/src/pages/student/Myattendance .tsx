@@ -1,6 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { CheckCircle, XCircle, Calendar } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/Table";
+import PaginationControls from "../../components/ui/PaginationControls";
+import { usePagination } from "../../hooks/usePagination";
+import { useDashboardSearch } from "../../context/DashboardSearchContext";
+import { matchesSearchQuery } from "../../utils/search";
 
 const BASE_URL = "http://localhost:8000";
 
@@ -26,31 +38,6 @@ type StudentAttendanceSummary = {
   }[];
 };
 
-const attendanceStats = [
-  {
-    key: "overallAttendance",
-    label: "Overall Attendance",
-    icon: CheckCircle,
-    bg: "bg-green-100",
-    iconColor: "text-green-600",
-    suffix: "%",
-  },
-  {
-    key: "classesAttended",
-    label: "Classes Attended",
-    icon: Calendar,
-    bg: "bg-blue-100",
-    iconColor: "text-blue-600",
-  },
-  {
-    key: "classesMissed",
-    label: "Classes Missed",
-    icon: XCircle,
-    bg: "bg-red-100",
-    iconColor: "text-red-500",
-  },
-] as const;
-
 function attendanceColor(pct: number) {
   if (pct >= 90) return { bar: "bg-green-500", badge: "bg-green-100 text-green-700" };
   if (pct >= 80) return { bar: "bg-yellow-500", badge: "bg-yellow-100 text-yellow-700" };
@@ -58,6 +45,7 @@ function attendanceColor(pct: number) {
 }
 
 function MyAttendance() {
+  const { searchQuery } = useDashboardSearch();
   const [activeTab, setActiveTab] = useState<"course" | "recent">("course");
   const [summary, setSummary] = useState<StudentAttendanceSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -96,8 +84,57 @@ function MyAttendance() {
     };
   }, []);
 
+  const courseAttendance = summary?.courseAttendance || [];
+  const recentAttendance = summary?.recentAttendance || [];
+  const filteredCourseAttendance = useMemo(
+    () =>
+      courseAttendance.filter((course) =>
+        matchesSearchQuery(
+          [course.code, course.name, course.present, course.total, course.percentage, `${course.percentage}%`],
+          searchQuery
+        )
+      ),
+    [courseAttendance, searchQuery]
+  );
+  const filteredRecentAttendance = useMemo(
+    () =>
+      recentAttendance.filter((record) =>
+        matchesSearchQuery(
+          [record.date, record.courseCode, record.courseName, record.status],
+          searchQuery
+        )
+      ),
+    [recentAttendance, searchQuery]
+  );
+  const {
+    currentPage: coursePage,
+    totalPages: courseTotalPages,
+    startIndex: courseStartIndex,
+    endIndex: courseEndIndex,
+    totalItems: totalCourseItems,
+    paginatedItems: paginatedCourseAttendance,
+    canPreviousPage: canPreviousCoursePage,
+    canNextPage: canNextCoursePage,
+    setPage: setCoursePage,
+    nextPage: nextCoursePage,
+    previousPage: previousCoursePage,
+  } = usePagination(filteredCourseAttendance, 6);
+  const {
+    currentPage: recentPage,
+    totalPages: recentTotalPages,
+    startIndex: recentStartIndex,
+    endIndex: recentEndIndex,
+    totalItems: totalRecentItems,
+    paginatedItems: paginatedRecentAttendance,
+    canPreviousPage: canPreviousRecentPage,
+    canNextPage: canNextRecentPage,
+    setPage: setRecentPage,
+    nextPage: nextRecentPage,
+    previousPage: previousRecentPage,
+  } = usePagination(filteredRecentAttendance, 8);
+
   return (
-    <div className="p-6 min-h-screen bg-gray-50">
+    <div className="h-full overflow-auto bg-gray-50 p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">My Attendance</h1>
         <p className="text-sm text-gray-400 mt-0.5">Track your attendance across all courses</p>
@@ -108,23 +145,6 @@ function MyAttendance() {
           {error}
         </div>
       )}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {attendanceStats.map((stat) => (
-          <div key={stat.key} className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center gap-4">
-            <div className={`w-12 h-12 ${stat.bg} rounded-xl flex items-center justify-center`}>
-              <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
-            </div>
-            <div>
-              <p className="text-xs text-gray-400">{stat.label}</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {loading ? "..." : `${summary?.counts[stat.key] ?? 0}${"suffix" in stat ? stat.suffix : ""}`}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
         <div className="flex border-b border-gray-100">
           <button
@@ -154,11 +174,13 @@ function MyAttendance() {
             <div className="space-y-4">
               {loading && <div className="text-sm text-gray-400">Loading attendance...</div>}
 
-              {!loading && (summary?.courseAttendance.length || 0) === 0 && (
-                <div className="text-sm text-gray-400">No attendance records found yet.</div>
+              {!loading && paginatedCourseAttendance.length === 0 && (
+                <div className="text-sm text-gray-400">
+                  {searchQuery.trim() ? "No attendance records match your search." : "No attendance records found yet."}
+                </div>
               )}
 
-              {!loading && summary?.courseAttendance.map((course) => {
+              {!loading && paginatedCourseAttendance.map((course) => {
                 const colors = attendanceColor(course.percentage);
 
                 return (
@@ -188,6 +210,23 @@ function MyAttendance() {
                   </div>
                 );
               })}
+
+              {!loading && filteredCourseAttendance.length > 0 && (
+                <PaginationControls
+                  currentPage={coursePage}
+                  totalPages={courseTotalPages}
+                  startIndex={courseStartIndex}
+                  endIndex={courseEndIndex}
+                  totalItems={totalCourseItems}
+                  itemLabel="courses"
+                  onPageChange={setCoursePage}
+                  onPrevious={previousCoursePage}
+                  onNext={nextCoursePage}
+                  canPreviousPage={canPreviousCoursePage}
+                  canNextPage={canNextCoursePage}
+                  className="rounded-xl border border-gray-100"
+                />
+              )}
             </div>
           )}
 
@@ -195,29 +234,32 @@ function MyAttendance() {
             <>
               {loading && <div className="text-sm text-gray-400">Loading recent attendance...</div>}
 
-              {!loading && (summary?.recentAttendance.length || 0) === 0 && (
-                <div className="text-sm text-gray-400">No recent attendance found yet.</div>
+              {!loading && paginatedRecentAttendance.length === 0 && (
+                <div className="text-sm text-gray-400">
+                  {searchQuery.trim() ? "No recent attendance matches your search." : "No recent attendance found yet."}
+                </div>
               )}
 
-              {!loading && (summary?.recentAttendance.length || 0) > 0 && (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-100">
-                        <th className="text-left py-3 text-xs font-semibold text-gray-500 uppercase">Date</th>
-                        <th className="text-left py-3 text-xs font-semibold text-gray-500 uppercase">Course</th>
-                        <th className="text-left py-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {summary?.recentAttendance.map((record) => (
-                        <tr key={record._id} className="border-b border-gray-50 hover:bg-gray-50 transition">
-                          <td className="py-3 text-gray-600 text-xs">{record.date}</td>
-                          <td className="py-3">
+              {!loading && paginatedRecentAttendance.length > 0 && (
+                <>
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow className="border-b border-gray-100">
+                        <TableHeader className="px-0">Date</TableHeader>
+                        <TableHeader className="px-0">Course</TableHeader>
+                        <TableHeader className="px-0">Status</TableHeader>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {paginatedRecentAttendance.map((record) => (
+                        <TableRow key={record._id} className="border-b border-gray-50 hover:bg-gray-50 transition">
+                          <TableCell className="px-0 py-3 text-gray-600 text-xs">{record.date}</TableCell>
+                          <TableCell className="px-0 py-3">
                             <div className="font-medium text-gray-800">{record.courseName}</div>
                             <div className="text-xs text-gray-400">{record.courseCode}</div>
-                          </td>
-                          <td className="py-3">
+                          </TableCell>
+                          <TableCell className="px-0 py-3">
                             <span
                               className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                                 record.status === "present"
@@ -227,12 +269,27 @@ function MyAttendance() {
                             >
                               {record.status === "present" ? "Present" : "Absent"}
                             </span>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                <PaginationControls
+                  currentPage={recentPage}
+                  totalPages={recentTotalPages}
+                  startIndex={recentStartIndex}
+                  endIndex={recentEndIndex}
+                  totalItems={totalRecentItems}
+                  itemLabel="records"
+                  onPageChange={setRecentPage}
+                  onPrevious={previousRecentPage}
+                  onNext={nextRecentPage}
+                  canPreviousPage={canPreviousRecentPage}
+                  canNextPage={canNextRecentPage}
+                  className="mt-4 rounded-xl border border-gray-100"
+                />
+                </>
               )}
             </>
           )}

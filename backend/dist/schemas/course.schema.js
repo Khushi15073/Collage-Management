@@ -86,5 +86,15 @@ const courseSchema = new mongoose_1.default.Schema({
         enum: ["Active", "Inactive", "Full"],
         default: "Active",
     },
+    sourceDegree: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "Degree",
+        default: null,
+    },
+    sourceSectionKey: {
+        type: String,
+        default: null,
+        trim: true,
+    },
 }, { timestamps: true });
 exports.CourseModel = mongoose_1.default.model("Course", courseSchema);

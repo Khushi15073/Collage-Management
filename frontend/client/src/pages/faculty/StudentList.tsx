@@ -1,6 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { Mail, Phone } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/Table";
+import PaginationControls from "../../components/ui/PaginationControls";
+import { usePagination } from "../../hooks/usePagination";
+import { useDashboardSearch } from "../../context/DashboardSearchContext";
+import { matchesSearchQuery } from "../../utils/search";
 
 const BASE_URL = "http://localhost:8000";
 
@@ -21,13 +34,11 @@ type FacultyStudent = {
 
 type FacultyStudentsResponse = {
   totalStudents: number;
-  courses: FacultyStudentCourse[];
   students: FacultyStudent[];
 };
 
 function StudentList() {
-  const [search, setSearch] = useState("");
-  const [courseFilter, setCourseFilter] = useState("All Courses");
+  const { searchQuery } = useDashboardSearch();
   const [data, setData] = useState<FacultyStudentsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,25 +76,37 @@ function StudentList() {
     };
   }, []);
 
-  const courses = ["All Courses", ...(data?.courses.map((course) => course.code) || [])];
   const students = data?.students || [];
 
-  const filteredStudents = students.filter((student) => {
-    const normalizedSearch = search.toLowerCase();
-    const matchesSearch =
-      student.name.toLowerCase().includes(normalizedSearch) ||
-      student.email.toLowerCase().includes(normalizedSearch) ||
-      student.phoneNumber.includes(search);
+  const filteredStudents = useMemo(() => {
+    return students.filter((student) => {
+      const values = [
+        student.name,
+        student.email,
+        student.phoneNumber,
+        student.gender,
+        ...student.courses.flatMap((course) => [course.code, course.name]),
+      ];
 
-    const matchesCourse =
-      courseFilter === "All Courses" ||
-      student.courses.some((course) => course.code === courseFilter);
-
-    return matchesSearch && matchesCourse;
-  });
+      return matchesSearchQuery(values, searchQuery);
+    });
+  }, [searchQuery, students]);
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    totalItems,
+    paginatedItems: paginatedStudents,
+    canPreviousPage,
+    canNextPage,
+    setPage,
+    nextPage,
+    previousPage,
+  } = usePagination(filteredStudents, 8);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="flex h-full flex-col overflow-hidden bg-gray-50 p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Student List</h1>
         <p className="mt-1 text-gray-400">Students assigned to your courses</p>
@@ -95,53 +118,35 @@ function StudentList() {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-gray-100 px-6 py-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-100 px-6 py-4">
           <h2 className="text-base font-semibold text-gray-800">All Students</h2>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <input
-              type="text"
-              placeholder="Search students..."
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:w-56"
-            />
-            <select
-              value={courseFilter}
-              onChange={(event) => setCourseFilter(event.target.value)}
-              className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {courses.map((course) => (
-                <option key={course}>{course}</option>
-              ))}
-            </select>
-          </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">Contact</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">Gender</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">Assigned Courses</th>
-              </tr>
-            </thead>
-            <tbody>
+        <TableContainer className="min-h-0 flex-1 overflow-auto">
+          <Table>
+            <TableHead>
+              <TableRow className="border-b border-gray-100">
+                <TableHeader>Name</TableHeader>
+                <TableHeader>Contact</TableHeader>
+                <TableHeader>Gender</TableHeader>
+                <TableHeader>Assigned Courses</TableHeader>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {loading && (
-                <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-sm text-gray-400">
+                <TableRow>
+                  <TableCell colSpan={4} className="py-12 text-center text-sm text-gray-400">
                     Loading students...
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
 
               {!loading &&
-                filteredStudents.map((student) => (
-                  <tr key={student._id} className="border-b border-gray-50 transition hover:bg-gray-50">
-                    <td className="px-6 py-4 font-medium text-gray-700">{student.name}</td>
-                    <td className="px-6 py-4">
+                paginatedStudents.map((student) => (
+                  <TableRow key={student._id} className="border-b border-gray-50 transition hover:bg-gray-50">
+                    <TableCell className="font-medium text-gray-700">{student.name}</TableCell>
+                    <TableCell>
                       <div className="mb-1 flex items-center gap-1.5 text-xs text-gray-500">
                         <Mail size={11} className="text-gray-400" />
                         {student.email}
@@ -150,9 +155,9 @@ function StudentList() {
                         <Phone size={11} className="text-gray-400" />
                         {student.phoneNumber}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 capitalize text-gray-600">{student.gender}</td>
-                    <td className="px-6 py-4">
+                    </TableCell>
+                    <TableCell className="capitalize text-gray-600">{student.gender}</TableCell>
+                    <TableCell>
                       <div className="flex flex-wrap gap-2">
                         {student.courses.map((course) => (
                           <span
@@ -163,24 +168,34 @@ function StudentList() {
                           </span>
                         ))}
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
 
-              {!loading && filteredStudents.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-sm text-gray-400">
+              {!loading && paginatedStudents.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="py-12 text-center text-sm text-gray-400">
                     No students found.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-        <div className="border-t border-gray-100 px-6 py-3 text-xs text-gray-400">
-          Showing {filteredStudents.length} of {data?.totalStudents ?? 0} students
-        </div>
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          startIndex={startIndex}
+          endIndex={endIndex}
+          totalItems={totalItems}
+          itemLabel="students"
+          onPageChange={setPage}
+          onPrevious={previousPage}
+          onNext={nextPage}
+          canPreviousPage={canPreviousPage}
+          canNextPage={canNextPage}
+        />
       </div>
     </div>
   );

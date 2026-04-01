@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
+import type { RootState } from "../app/store";
 
 const BASE_URL = "http://localhost:8000";
 
@@ -22,6 +23,11 @@ interface StudentState {
   students: Student[];
   loading: boolean;
   error: string | null;
+  currentPage: number;
+  limit: number;
+  totalItems: number;
+  totalPages: number;
+  search: string;
 }
 
 type CreateStudentResult = {
@@ -34,6 +40,11 @@ const initialState: StudentState = {
   students: [],
   loading: false,
   error: null,
+  currentPage: 1,
+  limit: 10,
+  totalItems: 0,
+  totalPages: 0,
+  search: "",
 };
 
 function normalizeStudent(student: any): Student {
@@ -50,16 +61,56 @@ function normalizeStudent(student: any): Student {
   };
 }
 
-export const fetchStudents = createAsyncThunk(
+type FetchStudentsArgs = {
+  page?: number;
+  limit?: number;
+  search?: string;
+};
+
+type FetchStudentsResult = {
+  students: Student[];
+  currentPage: number;
+  limit: number;
+  totalItems: number;
+  totalPages: number;
+  search: string;
+};
+
+export const fetchStudents = createAsyncThunk<
+  FetchStudentsResult,
+  FetchStudentsArgs | undefined,
+  { state: RootState; rejectValue: string }
+>(
   "students/fetchAll",
-  async (_, { rejectWithValue }) => {
+  async (args, { rejectWithValue, getState }) => {
     try {
-      const response = await axios.get(BASE_URL + "/api/user?role=student", {
+      const state = getState().students;
+      const page = args?.page ?? state.currentPage;
+      const limit = args?.limit ?? state.limit;
+      const search = args?.search ?? state.search;
+
+      const response = await axios.get(BASE_URL + "/api/user", {
+        params: {
+          role: "student",
+          page,
+          limit,
+          search: search.trim() || undefined,
+        },
         withCredentials: true,
       });
 
-      const users = response.data?.data || response.data || [];
-      return users.map(normalizeStudent);
+      const payload = response.data?.data || {};
+      const users = payload.items || [];
+      const pagination = payload.pagination || {};
+
+      return {
+        students: users.map(normalizeStudent),
+        currentPage: pagination.page ?? page,
+        limit: pagination.limit ?? limit,
+        totalItems: pagination.totalItems ?? users.length,
+        totalPages: pagination.totalPages ?? 0,
+        search,
+      };
     } catch (error: any) {
       return rejectWithValue(
         error.response?.status === 401 ? "Session expired. Please log in again." : (error.response?.data?.message || "Failed to fetch students")
@@ -151,15 +202,27 @@ const studentSlice = createSlice({
     clearStudentError(state) {
       state.error = null;
     },
+    setStudentPage(state, action: PayloadAction<number>) {
+      state.currentPage = action.payload;
+    },
+    setStudentLimit(state, action: PayloadAction<number>) {
+      state.limit = action.payload;
+      state.currentPage = 1;
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(fetchStudents.pending, (state) => {
       state.loading = true;
       state.error = null;
     });
-    builder.addCase(fetchStudents.fulfilled, (state, action: PayloadAction<Student[]>) => {
+    builder.addCase(fetchStudents.fulfilled, (state, action: PayloadAction<FetchStudentsResult>) => {
       state.loading = false;
-      state.students = action.payload;
+      state.students = action.payload.students;
+      state.currentPage = action.payload.currentPage;
+      state.limit = action.payload.limit;
+      state.totalItems = action.payload.totalItems;
+      state.totalPages = action.payload.totalPages;
+      state.search = action.payload.search;
     });
     builder.addCase(fetchStudents.rejected, (state, action) => {
       state.loading = false;
@@ -209,5 +272,5 @@ const studentSlice = createSlice({
   },
 });
 
-export const { clearStudentError } = studentSlice.actions;
+export const { clearStudentError, setStudentPage, setStudentLimit } = studentSlice.actions;
 export default studentSlice.reducer;

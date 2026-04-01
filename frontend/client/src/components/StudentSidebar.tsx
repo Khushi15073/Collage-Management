@@ -1,11 +1,11 @@
+import { BookOpen, HelpCircle, LayoutDashboard, ListChecks } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-// ✅ Student menu — Results removed as requested
 const menuItems = [
-  { icon: "⊞", label: "Dashboard",      path: "/student/dashboard"   },
-  { icon: "📚", label: "My Courses",     path: "/student/courses"     },
-  { icon: "✅", label: "My Attendance",  path: "/student/attendance"  },
-  { icon: "❓", label: "Help & Guide",   path: "/student/help"        },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/student/dashboard" },
+  { icon: BookOpen, label: "My Courses", path: "/student/courses" },
+  { icon: ListChecks, label: "My Attendance", path: "/student/attendance" },
+  { icon: HelpCircle, label: "Help & Guide", path: "/student/help" },
 ];
 
 interface StudentSidebarProps {
@@ -40,18 +40,26 @@ function StudentSidebar({ collapsed, onToggle }: StudentSidebarProps) {
       <nav className="flex-1 py-4 px-2 space-y-1">
         {menuItems.map((item) => {
           const isActive = location.pathname === item.path;
+          const Icon = item.icon;
+
           return (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
+              title={collapsed ? item.label : undefined}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                 isActive
                   ? "bg-blue-600 text-white shadow-sm"
                   : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
               }`}
             >
-              <span className="text-base">{item.icon}</span>
-              {!collapsed && <span>{item.label}</span>}
+              {collapsed ? (
+                <span className="mx-auto flex justify-center">
+                  <Icon size={16} />
+                </span>
+              ) : (
+                <span>{item.label}</span>
+              )}
             </button>
           );
         })}

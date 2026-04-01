@@ -7,6 +7,48 @@ import { ResponseCodes } from "../enums/responseCodes";
 export class CourseService {
   private courseFactory = new CourseFactory();
 
+  private normalizeSchedule(schedule?: string) {
+    if (typeof schedule !== "string") {
+      return "";
+    }
+
+    return schedule.trim().replace(/\s+/g, " ");
+  }
+
+  private normalizeInstructorId(instructor?: string | { _id?: string }) {
+    if (typeof instructor === "string") {
+      return instructor.trim();
+    }
+
+    if (instructor && typeof instructor === "object" && typeof instructor._id === "string") {
+      return instructor._id;
+    }
+
+    return "";
+  }
+
+  private async ensureFacultyScheduleAvailable(
+    instructorId: string,
+    schedule: string,
+    excludeCourseId?: string
+  ) {
+    if (!instructorId || !schedule) {
+      return;
+    }
+
+    const conflictingCourse = await this.courseFactory.findFacultyScheduleConflict(
+      instructorId,
+      schedule,
+      excludeCourseId
+    );
+
+    if (conflictingCourse) {
+      throw AppError.conflict(
+        `This faculty is already assigned  for the same schedule`
+      );
+    }
+  }
+
   private normalizeStudentIds(studentIds?: string[]) {
     if (!studentIds) {
       return [];
@@ -44,6 +86,8 @@ export class CourseService {
   // Validates: code must be unique
   // ─────────────────────────────────────────
   async createCourse(data: CreateCourseDTO) {
+    const normalizedSchedule = this.normalizeSchedule(data.schedule);
+    const normalizedInstructorId = this.normalizeInstructorId(data.instructor);
 
     // ✅ Validation: check required fields
     if (!data.code || !data.name || !data.department || !data.credits || !data.total) {
@@ -66,12 +110,16 @@ export class CourseService {
       throw AppError.badRequest("Total seats must be greater than 0");
     }
 
+    await this.ensureFacultyScheduleAvailable(normalizedInstructorId, normalizedSchedule);
+
     const studentIds = this.normalizeStudentIds(data.students);
     const enrollmentData = this.buildEnrollmentData(data.total, studentIds, data.status);
 
     // ── DB operation via factory ──
     const course = await this.courseFactory.createCourse({
       ...data,
+      schedule: normalizedSchedule,
+      instructor: normalizedInstructorId,
       ...enrollmentData,
     });
 
@@ -152,6 +200,11 @@ export class CourseService {
       throw AppError.badRequest("Total seats must be greater than 0");
     }
 
+    const nextSchedule = this.normalizeSchedule(data.schedule ?? existing.schedule);
+    const nextInstructorId = this.normalizeInstructorId(data.instructor ?? (existing.instructor as any));
+
+    await this.ensureFacultyScheduleAvailable(nextInstructorId, nextSchedule, id);
+
     const nextTotal = data.total ?? existing.total;
     const nextStudentIds = this.normalizeStudentIds(
       data.students ?? existing.students?.map((student: any) => String(student._id || student))
@@ -161,6 +214,8 @@ export class CourseService {
     // ── DB operation via factory ──
     const updated = await this.courseFactory.updateCourseById(id, {
       ...data,
+      schedule: nextSchedule,
+      instructor: nextInstructorId,
       ...enrollmentData,
     });
 

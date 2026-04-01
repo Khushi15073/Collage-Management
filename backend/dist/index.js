@@ -10,6 +10,7 @@ const cors_1 = __importDefault(require("cors"));
 const express_1 = __importDefault(require("express"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const connection_1 = require("./db/connection");
+const course_factory_1 = require("./factory/course.factory");
 const notFound_middleware_1 = require("./middleware/notFound.middleware");
 const error_middleware_1 = require("./middleware/error.middleware");
 const app = (0, express_1.default)();
@@ -42,6 +43,7 @@ app.use(error_middleware_1.errorMiddleware);
 const startServer = async () => {
     try {
         await (0, connection_1.connectDB)();
+        await new course_factory_1.CourseFactory().syncCoursesFromDegrees();
         app.listen(env_config_1.config.PORT, () => {
             console.log(`Server running on port ${env_config_1.config.PORT}`);
         });

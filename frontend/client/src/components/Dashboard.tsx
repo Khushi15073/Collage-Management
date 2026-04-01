@@ -1,8 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { Users, UsersRound, BookOpen, ShieldCheck, Armchair } from "lucide-react";
 import { useSelector } from "react-redux";
-import StatCard from "./StatCard";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/Table";
+import { useDashboardSearch } from "../context/DashboardSearchContext";
+import PaginationControls from "./ui/PaginationControls";
+import { usePagination } from "../hooks/usePagination";
+import StatsStrip from "./StatsStrip";
+import { matchesSearchQuery } from "../utils/search";
 
 const BASE_URL = "http://localhost:8000";
 
@@ -49,6 +53,7 @@ function getStatusBadge(status: RecentCourse["status"]) {
 
 export default function Dashboard() {
   const user = useSelector((state: any) => state.auth.user);
+  const { searchQuery } = useDashboardSearch();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -87,110 +92,136 @@ export default function Dashboard() {
   }, []);
 
   const displayName = user?.name || "Admin";
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredRecentCourses = useMemo(() => {
+    return (summary?.recentCourses || []).filter((course) =>
+      matchesSearchQuery(
+        [
+          course.code,
+          course.name,
+          course.department,
+          course.status,
+          course.instructor?.name || "",
+          course.enrolled,
+          course.total,
+          `${course.enrolled}/${course.total}`,
+        ],
+        normalizedQuery
+      )
+    );
+  }, [normalizedQuery, summary?.recentCourses]);
+  const {
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    totalItems,
+    paginatedItems: paginatedRecentCourses,
+    canPreviousPage,
+    canNextPage,
+    setPage,
+    nextPage,
+    previousPage,
+  } = usePagination(filteredRecentCourses, 6);
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+    <div className="flex h-full flex-col overflow-hidden bg-gray-50 p-6">
+      <div className="mb-4 shrink-0">
+        <h1 className="mb-1 text-3xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-gray-600">Welcome back, {displayName}</p>
       </div>
 
       {error && (
-        <div className="mb-6 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mb-6 shrink-0 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-        <StatCard
-          title="Total Students"
-          value={loading ? "..." : String(summary?.counts.totalStudents ?? 0)}
-          icon={Users}
-          iconBgColor="bg-blue-600"
-        />
-        <StatCard
-          title="Total Faculty"
-          value={loading ? "..." : String(summary?.counts.totalFaculty ?? 0)}
-          icon={UsersRound}
-          iconBgColor="bg-green-500"
-        />
-        <StatCard
-          title="Total Courses"
-          value={loading ? "..." : String(summary?.counts.totalCourses ?? 0)}
-          icon={BookOpen}
-          iconBgColor="bg-indigo-600"
-        />
-        <StatCard
-          title="Available Seats"
-          value={loading ? "..." : String(summary?.enrollment.availableSeats ?? 0)}
-          icon={Armchair}
-          iconBgColor="bg-orange-500"
-        />
-        <StatCard
-          title="Permissions"
-          value={loading ? "..." : String(summary?.counts.totalPermissions ?? 0)}
-          icon={ShieldCheck}
-          iconBgColor="bg-slate-700"
-        />
-      </div>
+      <StatsStrip
+        items={[
+          { title: "Total Students", value: String(summary?.counts.totalStudents ?? 0), loading },
+          { title: "Total Faculty", value: String(summary?.counts.totalFaculty ?? 0), loading },
+          { title: "Total Courses", value: String(summary?.counts.totalCourses ?? 0), loading },
+          { title: "Available Seats", value: String(summary?.enrollment.availableSeats ?? 0), loading },
+          { title: "Permissions", value: String(summary?.counts.totalPermissions ?? 0), loading },
+        ]}
+      />
 
-      <div className="mt-6 grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-6">
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <div className="mt-4 grid min-h-0 flex-1 grid-cols-1 gap-6 xl:grid-cols-[1.5fr_1fr]">
+        <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-100 px-6 py-4">
             <h2 className="text-base font-semibold text-gray-800">Recent Courses</h2>
             <p className="mt-1 text-sm text-gray-400">Latest courses from the backend</p>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">Code</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">Course</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">Instructor</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-500">Status</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <Table className="table-fixed">
+              <TableHead>
+                <TableRow className="border-b border-gray-100">
+                  <TableHeader className="w-28">Code</TableHeader>
+                  <TableHeader>Course</TableHeader>
+                  <TableHeader className="w-48">Instructor</TableHeader>
+                  <TableHeader className="w-32">Status</TableHeader>
+                </TableRow>
+              </TableHead>
+              <TableBody>
                 {loading && (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-10 text-center text-sm text-gray-400">
+                  <TableRow>
+                    <TableCell colSpan={4} className="py-10 text-center text-sm text-gray-400">
                       Loading dashboard data...
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )}
 
                 {!loading &&
-                  (summary?.recentCourses.length ?? 0) > 0 &&
-                  summary?.recentCourses.map((course) => (
-                    <tr key={course._id} className="border-b border-gray-50">
-                      <td className="px-6 py-4 font-semibold text-gray-800">{course.code}</td>
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-gray-800">{course.name}</div>
-                        <div className="text-xs text-gray-400">{course.department}</div>
-                      </td>
-                      <td className="px-6 py-4 text-gray-600">{course.instructor?.name || "Unassigned"}</td>
-                      <td className="px-6 py-4">
+                  paginatedRecentCourses.length > 0 &&
+                  paginatedRecentCourses.map((course) => (
+                    <TableRow key={course._id} className="border-b border-gray-50">
+                      <TableCell className="font-semibold text-gray-800">{course.code}</TableCell>
+                      <TableCell>
+                        <div className="truncate font-medium text-gray-800">{course.name}</div>
+                        <div className="truncate text-xs text-gray-400">{course.department}</div>
+                      </TableCell>
+                      <TableCell className="truncate text-gray-600">
+                        {course.instructor?.name || "Unassigned"}
+                      </TableCell>
+                      <TableCell>
                         <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadge(course.status)}`}>
                           {course.status}
                         </span>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
 
-                {!loading && (summary?.recentCourses.length ?? 0) === 0 && (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-10 text-center text-sm text-gray-400">
-                      No courses available yet.
-                    </td>
-                  </tr>
+                {!loading && paginatedRecentCourses.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="py-10 text-center text-sm text-gray-400">
+                      {normalizedQuery ? "No recent courses match your search." : "No courses available yet."}
+                    </TableCell>
+                  </TableRow>
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
+
+          {!loading && filteredRecentCourses.length > 0 && (
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              startIndex={startIndex}
+              endIndex={endIndex}
+              totalItems={totalItems}
+              itemLabel="courses"
+              onPageChange={setPage}
+              onPrevious={previousPage}
+              onNext={nextPage}
+              canPreviousPage={canPreviousPage}
+              canNextPage={canNextPage}
+            />
+          )}
         </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <div className="min-h-0 overflow-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-100 px-6 py-4">
             <h2 className="text-base font-semibold text-gray-800">System Snapshot</h2>
             <p className="mt-1 text-sm text-gray-400">Current totals from your backend</p>

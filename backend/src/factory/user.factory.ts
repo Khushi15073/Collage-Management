@@ -35,24 +35,51 @@ export class UserFactory {
     return role.name;
   }
 
-  public async findAllUsers(roleName?: string) {
+  public async findRoleIdByName(roleName: string) {
+    const role = await RoleModel.findOne({ name: roleName });
+    if (!role) {
+      throw AppError.notFound("Role not found");
+    }
+
+    return role._id;
+  }
+
+  public async findAllUsers(options?: {
+    roleId?: string;
+    search?: string;
+    skip?: number;
+    limit?: number;
+  }) {
     try {
-      let filter = {};
+      const filter: Record<string, any> = {};
 
-      if (roleName) {
-        const role = await RoleModel.findOne({ name: roleName });
-        if (!role) {
-          throw AppError.notFound("Role not found");
-        }
-
-        filter = { role: role._id };
+      if (options?.roleId) {
+        filter.role = options.roleId;
       }
 
-      const users = await UserModel.find(filter).populate("role");
-      if (users.length === 0) {
-        throw AppError.notFound("No users found");
+      const normalizedSearch = options?.search?.trim();
+      if (normalizedSearch) {
+        filter.$or = [
+          { name: { $regex: normalizedSearch, $options: "i" } },
+          { email: { $regex: normalizedSearch, $options: "i" } },
+          { phoneNumber: { $regex: normalizedSearch, $options: "i" } },
+          { gender: { $regex: normalizedSearch, $options: "i" } },
+        ];
       }
-      return users;
+
+      const skip = options?.skip ?? 0;
+      const limit = options?.limit ?? 10;
+
+      const [users, totalItems] = await Promise.all([
+        UserModel.find(filter)
+          .sort({ createdAt: -1, _id: -1 })
+          .skip(skip)
+          .limit(limit)
+          .populate("role"),
+        UserModel.countDocuments(filter),
+      ]);
+
+      return { users, totalItems };
     } catch (error) {
       throw error;
     }
