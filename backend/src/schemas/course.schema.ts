@@ -52,7 +52,7 @@ const courseSchema = new mongoose.Schema<ICourse>(
     },
     credits: {
       type:     Number,
-      required: true,
+      default: 0,
     },
     enrolled: {
       type:    Number,

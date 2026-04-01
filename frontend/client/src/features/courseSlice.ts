@@ -32,7 +32,7 @@ type SaveCoursePayload = {
   department: string;
   instructor: string;
   students: string[];
-  credits: number;
+  credits?: number;
   total: number;
   status: "Active" | "Inactive" | "Full";
 };

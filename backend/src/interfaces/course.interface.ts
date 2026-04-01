@@ -6,7 +6,7 @@ export interface CreateCourseDTO {
   department: string;
   instructor: string;  // faculty userId
   students?:  string[];
-  credits:    number;
+  credits?:   number;
   enrolled?:  number;
   total:      number;
   status?:    string;

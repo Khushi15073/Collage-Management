@@ -61,11 +61,12 @@ class CourseService {
     // Validates: code must be unique
     // ─────────────────────────────────────────
     async createCourse(data) {
+        var _a;
         const normalizedSchedule = this.normalizeSchedule(data.schedule);
         const normalizedInstructorId = this.normalizeInstructorId(data.instructor);
         // ✅ Validation: check required fields
-        if (!data.code || !data.name || !data.department || !data.credits || !data.total) {
-            throw errorClass_1.AppError.badRequest("code, name, department, credits and total seats are required");
+        if (!data.code || !data.name || !data.department || !data.total) {
+            throw errorClass_1.AppError.badRequest("code, name, department and total seats are required");
         }
         // ✅ Validation: course code must be unique
         const existing = await this.courseFactory.findCourseByCode(data.code);
@@ -73,8 +74,8 @@ class CourseService {
             throw errorClass_1.AppError.conflict(`Course with code "${data.code}" already exists`);
         }
         // ✅ Validation: credits must be positive
-        if (data.credits <= 0) {
-            throw errorClass_1.AppError.badRequest("Credits must be greater than 0");
+        if (data.credits !== undefined && data.credits < 0) {
+            throw errorClass_1.AppError.badRequest("Credits cannot be negative");
         }
         // ✅ Validation: total seats must be positive
         if (data.total <= 0) {
@@ -86,6 +87,7 @@ class CourseService {
         // ── DB operation via factory ──
         const course = await this.courseFactory.createCourse({
             ...data,
+            credits: (_a = data.credits) !== null && _a !== void 0 ? _a : 0,
             schedule: normalizedSchedule,
             instructor: normalizedInstructorId,
             ...enrollmentData,
@@ -136,8 +138,8 @@ class CourseService {
             }
         }
         // ✅ Validation: credits must be positive if provided
-        if (data.credits !== undefined && data.credits <= 0) {
-            throw errorClass_1.AppError.badRequest("Credits must be greater than 0");
+        if (data.credits !== undefined && data.credits < 0) {
+            throw errorClass_1.AppError.badRequest("Credits cannot be negative");
         }
         // ✅ Validation: total seats must be positive if provided
         if (data.total !== undefined && data.total <= 0) {

@@ -102,7 +102,7 @@ export class CourseFactory {
             },
             $setOnInsert: {
               schedule: "",
-              credits: 3,
+              credits: 0,
               total: 50,
               enrolled: 0,
               students: [],

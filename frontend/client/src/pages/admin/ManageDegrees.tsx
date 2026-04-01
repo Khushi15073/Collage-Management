@@ -210,7 +210,7 @@ function ManageDegrees() {
     );
   }
 
-  function startEditCourse(sectionKey: string, course: AddedCourse) {
+  function startEditCourse(course: AddedCourse) {
     setEditingCourseId(course.id);
     setEditingCourseData({ name: course.name, code: course.code });
   }
@@ -775,7 +775,7 @@ function ManageDegrees() {
                                         <td className="px-4 py-3 text-right space-x-2">
                                           <button
                                             type="button"
-                                            onClick={() => startEditCourse(section.key, course)}
+                                            onClick={() => startEditCourse(course)}
                                             className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-blue-600 transition hover:bg-blue-50"
                                           >
                                             Edit

@@ -90,8 +90,8 @@ export class CourseService {
     const normalizedInstructorId = this.normalizeInstructorId(data.instructor);
 
     // ✅ Validation: check required fields
-    if (!data.code || !data.name || !data.department || !data.credits || !data.total) {
-      throw AppError.badRequest("code, name, department, credits and total seats are required");
+    if (!data.code || !data.name || !data.department || !data.total) {
+      throw AppError.badRequest("code, name, department and total seats are required");
     }
 
     // ✅ Validation: course code must be unique
@@ -101,8 +101,8 @@ export class CourseService {
     }
 
     // ✅ Validation: credits must be positive
-    if (data.credits <= 0) {
-      throw AppError.badRequest("Credits must be greater than 0");
+    if (data.credits !== undefined && data.credits < 0) {
+      throw AppError.badRequest("Credits cannot be negative");
     }
 
     // ✅ Validation: total seats must be positive
@@ -118,6 +118,7 @@ export class CourseService {
     // ── DB operation via factory ──
     const course = await this.courseFactory.createCourse({
       ...data,
+      credits: data.credits ?? 0,
       schedule: normalizedSchedule,
       instructor: normalizedInstructorId,
       ...enrollmentData,
@@ -191,8 +192,8 @@ export class CourseService {
     }
 
     // ✅ Validation: credits must be positive if provided
-    if (data.credits !== undefined && data.credits <= 0) {
-      throw AppError.badRequest("Credits must be greater than 0");
+    if (data.credits !== undefined && data.credits < 0) {
+      throw AppError.badRequest("Credits cannot be negative");
     }
 
     // ✅ Validation: total seats must be positive if provided

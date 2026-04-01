@@ -36,7 +36,6 @@ const emptyForm = {
   department: "",
   instructor: "",
   students: [] as string[],
-  credits: 3,
   total: 50,
   status: "Active" as "Active" | "Inactive" | "Full",
 };
@@ -71,6 +70,7 @@ function ManageCourses() {
   const [editCourse, setEditCourse] = useState<Course | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [studentSearch, setStudentSearch] = useState("");
+  const [formError, setFormError] = useState("");
 
   useEffect(() => {
     dispatch(fetchCourses() as any);
@@ -121,12 +121,14 @@ function ManageCourses() {
   function resetForm() {
     setForm(emptyForm);
     setStudentSearch("");
+    setFormError("");
   }
 
   function openAddModal() {
     setEditCourse(null);
     resetForm();
     dispatch(clearCourseError());
+    setFormError("");
     setShowModal(true);
   }
 
@@ -139,11 +141,11 @@ function ManageCourses() {
       department: course.department,
       instructor: course.instructor?._id || "",
       students: course.students.map((student) => student._id),
-      credits: course.credits,
       total: course.total,
       status: course.status,
     });
     dispatch(clearCourseError());
+    setFormError("");
     setShowModal(true);
   }
 
@@ -154,21 +156,32 @@ function ManageCourses() {
   }
 
   async function handleSave() {
-    if (
-      form.code === "" ||
-      form.name === "" ||
-      form.schedule === "" ||
-      form.department === "" ||
-      form.instructor === "" ||
-      form.credits <= 0 ||
-      form.total <= 0
-    ) {
+    if (form.code === "" || form.name === "" || form.department === "") {
+      setFormError("Course code, name, and department are required.");
+      return;
+    }
+
+    if (form.schedule === "") {
+      setFormError("Please select a schedule.");
+      return;
+    }
+
+    if (form.instructor === "") {
+      setFormError("Please select a faculty member.");
+      return;
+    }
+
+    if (form.total <= 0) {
+      setFormError("Total seats must be greater than 0.");
       return;
     }
 
     if (form.students.length > form.total) {
+      setFormError("Selected students cannot exceed total seats.");
       return;
     }
+
+    setFormError("");
 
     if (editCourse) {
       const result = await dispatch(
@@ -203,12 +216,16 @@ function ManageCourses() {
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) {
     const { name, value } = event.target;
-    const numberFields = ["credits", "total"];
+    const numberFields = ["total"];
 
     setForm((current) => ({
       ...current,
       [name]: numberFields.includes(name) ? Number(value) : value,
     }));
+
+    if (formError) {
+      setFormError("");
+    }
 
     if (error) {
       dispatch(clearCourseError());
@@ -228,6 +245,10 @@ function ManageCourses() {
       };
     });
 
+    if (formError) {
+      setFormError("");
+    }
+
     if (error) {
       dispatch(clearCourseError());
     }
@@ -239,6 +260,10 @@ function ManageCourses() {
       students: students.slice(0, current.total).map((student) => student._id),
     }));
 
+    if (formError) {
+      setFormError("");
+    }
+
     if (error) {
       dispatch(clearCourseError());
     }
@@ -249,6 +274,10 @@ function ManageCourses() {
       ...current,
       students: [],
     }));
+
+    if (formError) {
+      setFormError("");
+    }
 
     if (error) {
       dispatch(clearCourseError());
@@ -270,6 +299,9 @@ function ManageCourses() {
       student.email.toLowerCase().includes(query)
     );
   });
+  const scheduleChoices = form.schedule && !scheduleOptions.includes(form.schedule)
+    ? [form.schedule, ...scheduleOptions]
+    : scheduleOptions;
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-gray-50 p-8">
@@ -443,7 +475,7 @@ function ManageCourses() {
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select schedule</option>
-                  {scheduleOptions.map((option) => (
+                  {scheduleChoices.map((option) => (
                     <option key={option} value={option}>
                       {option}
                     </option>
@@ -579,6 +611,12 @@ function ManageCourses() {
                 )}
               </div>
             </div>
+
+            {formError && (
+              <div className="mt-4 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {formError}
+              </div>
+            )}
             </div>
 
             <div className="flex gap-3 border-t border-gray-100 px-6 py-4">

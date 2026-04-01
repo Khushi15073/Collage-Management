@@ -71,7 +71,7 @@ const courseSchema = new mongoose_1.default.Schema({
     },
     credits: {
         type: Number,
-        required: true,
+        default: 0,
     },
     enrolled: {
         type: Number,
