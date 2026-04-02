@@ -75,6 +75,12 @@ function buildUserPermissionName(action: UserAction, roleName: string | null) {
     return `${action}_faculty`;
   }
 
+  // Custom roles are managed through the same admin-style user management flow.
+  // Reuse the admin user-management permissions for them.
+  if (roleName) {
+    return `${action}_admins`;
+  }
+
   return null;
 }
 

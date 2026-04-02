@@ -18,6 +18,12 @@ export type Role = {
   permissions?: RolePermission[];
 };
 
+type CreateRolePayload = {
+  name: string;
+  description?: string;
+  permissions: string[];
+};
+
 interface RoleState {
   roles: Role[];
   loading: boolean;
@@ -60,16 +66,45 @@ export const updateRolePermissions = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await axios.put(
+      await axios.put(
         `${BASE_URL}/api/role/${data.id}`,
         { permissions: data.permissions },
         { withCredentials: true }
       );
 
-      return response.data?.data || response.data;
+      const refreshed = await axios.get(`${BASE_URL}/api/role`, {
+        withCredentials: true,
+      });
+
+      return refreshed.data?.data || refreshed.data || [];
     } catch (error: any) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to update role permissions"
+      );
+    }
+  }
+);
+
+export const createRole = createAsyncThunk(
+  "roles/create",
+  async (data: CreateRolePayload, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(`${BASE_URL}/api/role`, data, {
+        withCredentials: true,
+      });
+
+      const createdRole = response.data?.data || response.data;
+      const refreshed = await axios.get(`${BASE_URL}/api/role`, {
+        withCredentials: true,
+      });
+
+      return {
+        createdRole,
+        roles: refreshed.data?.data || refreshed.data || [],
+      };
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to create role"
       );
     }
   }
@@ -97,13 +132,24 @@ const roleSlice = createSlice({
       state.loading = true;
       state.error = null;
     });
-    builder.addCase(updateRolePermissions.fulfilled, (state, action: PayloadAction<Role>) => {
+    builder.addCase(updateRolePermissions.fulfilled, (state, action: PayloadAction<Role[]>) => {
       state.loading = false;
-      state.roles = state.roles.map((role) =>
-        role._id === action.payload._id ? action.payload : role
-      );
+      state.roles = action.payload;
     });
     builder.addCase(updateRolePermissions.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload as string;
+    });
+
+    builder.addCase(createRole.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    });
+    builder.addCase(createRole.fulfilled, (state, action: PayloadAction<{ createdRole: Role; roles: Role[] }>) => {
+      state.loading = false;
+      state.roles = action.payload.roles;
+    });
+    builder.addCase(createRole.rejected, (state, action) => {
       state.loading = false;
       state.error = action.payload as string;
     });

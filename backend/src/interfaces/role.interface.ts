@@ -5,7 +5,7 @@ import mongoose from "mongoose";
 
 export interface IRole {
     _id: mongoose.Types.ObjectId;
-    name: "admin" | "faculty" | "student";  
+    name: string;
     description?: string;                   
     permissions?: mongoose.Types.ObjectId[]; 
     createdAt?: Date;

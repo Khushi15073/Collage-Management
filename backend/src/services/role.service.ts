@@ -9,7 +9,9 @@ export class roleService {
     private roleFactory = new roleFactory()
     public async createRole(roleData: CreateRoleDTO) {
         try {
-            if (!roleData.name) {
+            const normalizedName = roleData.name?.trim().toLowerCase().replace(/\s+/g, "_");
+
+            if (!normalizedName) {
                 throw AppError.badRequest("Missing required fields")
             }
 
@@ -23,8 +25,12 @@ export class roleService {
                 }
             }
 
-            await this.roleFactory.findRoleByName(roleData.name)
-            const result = await this.roleFactory.createRole(roleData)
+            await this.roleFactory.findRoleByName(normalizedName)
+            const result = await this.roleFactory.createRole({
+                ...roleData,
+                name: normalizedName,
+                description: roleData.description?.trim() || undefined,
+            })
 
             return result
         } catch (error) {
@@ -61,6 +67,9 @@ export class roleService {
 
     public async UpdateRole(roleId: string, upatedRole: UpdateRoleDTO) {
         try {
+            const normalizedName =
+                upatedRole.name?.trim().toLowerCase().replace(/\s+/g, "_");
+
             if (upatedRole.permissions) {
                 const permissionCount = await PermissionModel.countDocuments({
                     _id: { $in: upatedRole.permissions },
@@ -71,7 +80,21 @@ export class roleService {
                 }
             }
 
-            const UpdateRole = await this.roleFactory.updateRole(roleId, upatedRole)
+            if (normalizedName) {
+                const existingRole = await this.roleFactory.getRoleById(roleId);
+                if (existingRole.name !== normalizedName) {
+                    await this.roleFactory.findRoleByName(normalizedName);
+                }
+            }
+
+            const UpdateRole = await this.roleFactory.updateRole(roleId, {
+                ...upatedRole,
+                name: normalizedName ?? upatedRole.name,
+                description:
+                    upatedRole.description !== undefined
+                        ? upatedRole.description.trim() || undefined
+                        : undefined,
+            })
             return ResponseHandler.sendResponse(
                 ResponseCodes.OK,
                 "role updated successfully",

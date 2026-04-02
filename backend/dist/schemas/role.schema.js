@@ -41,10 +41,6 @@ const roleSchema = new mongoose_1.default.Schema({
         required: true,
         unique: true,
         trim: true,
-        enum: {
-            values: ["admin", "faculty", "student"],
-            message: "{VALUE} is not a valid role"
-        },
     },
     description: {
         type: String,

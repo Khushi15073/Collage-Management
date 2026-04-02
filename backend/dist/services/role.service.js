@@ -14,8 +14,10 @@ class roleService {
         this.roleFactory = new role_factory_1.roleFactory();
     }
     async createRole(roleData) {
+        var _a, _b;
         try {
-            if (!roleData.name) {
+            const normalizedName = (_a = roleData.name) === null || _a === void 0 ? void 0 : _a.trim().toLowerCase().replace(/\s+/g, "_");
+            if (!normalizedName) {
                 throw errorClass_1.AppError.badRequest("Missing required fields");
             }
             if (roleData.permissions && roleData.permissions.length > 0) {
@@ -26,8 +28,12 @@ class roleService {
                     throw errorClass_1.AppError.badRequest("One or more permissions are invalid");
                 }
             }
-            await this.roleFactory.findRoleByName(roleData.name);
-            const result = await this.roleFactory.createRole(roleData);
+            await this.roleFactory.findRoleByName(normalizedName);
+            const result = await this.roleFactory.createRole({
+                ...roleData,
+                name: normalizedName,
+                description: ((_b = roleData.description) === null || _b === void 0 ? void 0 : _b.trim()) || undefined,
+            });
             return result;
         }
         catch (error) {
@@ -51,7 +57,9 @@ class roleService {
         return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.OK, "successfully fetched Role by id", role);
     }
     async UpdateRole(roleId, upatedRole) {
+        var _a;
         try {
+            const normalizedName = (_a = upatedRole.name) === null || _a === void 0 ? void 0 : _a.trim().toLowerCase().replace(/\s+/g, "_");
             if (upatedRole.permissions) {
                 const permissionCount = await permission_schema_1.PermissionModel.countDocuments({
                     _id: { $in: upatedRole.permissions },
@@ -60,7 +68,19 @@ class roleService {
                     throw errorClass_1.AppError.badRequest("One or more permissions are invalid");
                 }
             }
-            const UpdateRole = await this.roleFactory.updateRole(roleId, upatedRole);
+            if (normalizedName) {
+                const existingRole = await this.roleFactory.getRoleById(roleId);
+                if (existingRole.name !== normalizedName) {
+                    await this.roleFactory.findRoleByName(normalizedName);
+                }
+            }
+            const UpdateRole = await this.roleFactory.updateRole(roleId, {
+                ...upatedRole,
+                name: normalizedName !== null && normalizedName !== void 0 ? normalizedName : upatedRole.name,
+                description: upatedRole.description !== undefined
+                    ? upatedRole.description.trim() || undefined
+                    : undefined,
+            });
             return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.OK, "role updated successfully", UpdateRole);
         }
         catch (error) {

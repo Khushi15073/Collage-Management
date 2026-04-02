@@ -28,6 +28,7 @@ interface AdminState {
   totalItems: number;
   totalPages: number;
   search: string;
+  role: string;
 }
 
 type CreateAdminResult = {
@@ -45,6 +46,7 @@ const initialState: AdminState = {
   totalItems: 0,
   totalPages: 0,
   search: "",
+  role: "admin",
 };
 
 function normalizeAdmin(user: any): AdminUser {
@@ -65,6 +67,7 @@ type FetchAdminsArgs = {
   page?: number;
   limit?: number;
   search?: string;
+  role?: string;
 };
 
 type FetchAdminsResult = {
@@ -74,6 +77,7 @@ type FetchAdminsResult = {
   totalItems: number;
   totalPages: number;
   search: string;
+  role: string;
 };
 
 export const fetchAdmins = createAsyncThunk<
@@ -88,10 +92,11 @@ export const fetchAdmins = createAsyncThunk<
       const page = args?.page ?? state.currentPage;
       const limit = args?.limit ?? state.limit;
       const search = args?.search ?? state.search;
+      const role = args?.role ?? state.role;
 
       const response = await axios.get(BASE_URL + "/api/user", {
         params: {
-          role: "admin",
+          role,
           page,
           limit,
           search: search.trim() || undefined,
@@ -110,6 +115,7 @@ export const fetchAdmins = createAsyncThunk<
         totalItems: pagination.totalItems ?? users.length,
         totalPages: pagination.totalPages ?? 0,
         search,
+        role,
       };
     } catch (error: any) {
       return rejectWithValue(
@@ -205,6 +211,10 @@ const adminSlice = createSlice({
       state.limit = action.payload;
       state.currentPage = 1;
     },
+    setAdminRole(state, action: PayloadAction<string>) {
+      state.role = action.payload;
+      state.currentPage = 1;
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(fetchAdmins.pending, (state) => {
@@ -219,6 +229,7 @@ const adminSlice = createSlice({
       state.totalItems = action.payload.totalItems;
       state.totalPages = action.payload.totalPages;
       state.search = action.payload.search;
+      state.role = action.payload.role;
     });
     builder.addCase(fetchAdmins.rejected, (state, action) => {
       state.loading = false;
@@ -263,5 +274,5 @@ const adminSlice = createSlice({
   },
 });
 
-export const { clearAdminError, setAdminPage, setAdminLimit } = adminSlice.actions;
+export const { clearAdminError, setAdminPage, setAdminLimit, setAdminRole } = adminSlice.actions;
 export default adminSlice.reducer;

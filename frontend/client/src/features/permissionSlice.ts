@@ -88,11 +88,11 @@ export const createPermission = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await axios.post(`${BASE_URL}/api/permission`, data, {
+      await axios.post(`${BASE_URL}/api/permission`, data, {
         withCredentials: true,
       });
 
-      return normalizePermission(response.data?.data || response.data);
+      return await getPermissions();
     } catch (error: any) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to create permission"
@@ -136,12 +136,9 @@ const permissionSlice = createSlice({
       state.loading = true;
       state.error = null;
     });
-    builder.addCase(createPermission.fulfilled, (state, action: PayloadAction<Permission>) => {
+    builder.addCase(createPermission.fulfilled, (state, action: PayloadAction<Permission[]>) => {
       state.loading = false;
-      const exists = state.permissions.some((permission) => permission._id === action.payload._id);
-      if (!exists) {
-        state.permissions.push(action.payload);
-      }
+      state.permissions = action.payload;
     });
     builder.addCase(createPermission.rejected, (state, action) => {
       state.loading = false;

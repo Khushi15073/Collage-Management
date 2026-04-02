@@ -8,6 +8,7 @@ import {
   fetchAdmins,
   setAdminLimit,
   setAdminPage,
+  setAdminRole,
   updateAdmin,
 } from "../../features/adminSlice";
 import type { AdminUser } from "../../features/adminSlice";
@@ -30,6 +31,7 @@ const emptyForm = {
   password: "",
   phoneNumber: "",
   gender: "male" as "male" | "female" | "other",
+  role: "",
 };
 
 function ManageAdmin() {
@@ -43,6 +45,7 @@ function ManageAdmin() {
   const limit = useSelector((state: any) => state.admins.limit);
   const totalItems = useSelector((state: any) => state.admins.totalItems);
   const totalPages = useSelector((state: any) => state.admins.totalPages);
+  const selectedRoleName = useSelector((state: any) => state.admins.role);
   const roles = useSelector((state: any) => state.roles.roles);
   const rolesLoading = useSelector((state: any) => state.roles.loading);
   const roleError = useSelector((state: any) => state.roles.error);
@@ -68,7 +71,31 @@ function ManageAdmin() {
     return () => window.clearTimeout(timeoutId);
   }, [searchQuery]);
 
+  const manageableRoles = useMemo(
+    () => roles.filter((role: any) => role.name !== "student" && role.name !== "faculty"),
+    [roles]
+  );
+
+  const selectedRole = useMemo(() => {
+    return manageableRoles.find((role: any) => role.name === selectedRoleName) || null;
+  }, [manageableRoles, selectedRoleName]);
+
   useEffect(() => {
+    if (manageableRoles.length === 0) {
+      return;
+    }
+
+    const hasSelectedRole = manageableRoles.some((role: any) => role.name === selectedRoleName);
+    if (!selectedRoleName || !hasSelectedRole) {
+      dispatch(setAdminRole(manageableRoles[0].name));
+    }
+  }, [dispatch, manageableRoles, selectedRoleName]);
+
+  useEffect(() => {
+    if (!selectedRoleName) {
+      return;
+    }
+
     if (previousSearchRef.current !== debouncedSearch) {
       previousSearchRef.current = debouncedSearch;
 
@@ -83,18 +110,17 @@ function ManageAdmin() {
         page: currentPage,
         limit,
         search: debouncedSearch,
+        role: selectedRoleName,
       }) as any
     );
-  }, [currentPage, debouncedSearch, dispatch, limit]);
-
-  const adminRoleId = useMemo(() => {
-    const adminRole = roles.find((role: any) => role.name === "admin");
-    return adminRole?._id || "";
-  }, [roles]);
+  }, [currentPage, debouncedSearch, dispatch, limit, selectedRoleName]);
 
   function openAddModal() {
     setEditAdmin(null);
-    setForm(emptyForm);
+    setForm({
+      ...emptyForm,
+      role: selectedRole?._id || "",
+    });
     setEmailNotice(null);
     dispatch(clearAdminError());
     setShowModal(true);
@@ -108,6 +134,7 @@ function ManageAdmin() {
       password: "",
       phoneNumber: admin.phoneNumber,
       gender: admin.gender,
+      role: admin.role?._id || selectedRole?._id || "",
     });
     dispatch(clearAdminError());
     setShowModal(true);
@@ -120,7 +147,7 @@ function ManageAdmin() {
   }
 
   async function handleSave() {
-    if (!adminRoleId || !form.name || !form.email || !form.phoneNumber) return;
+    if (!form.role || !form.name || !form.email || !form.phoneNumber) return;
     if (!editAdmin && !form.password) return;
 
     if (editAdmin) {
@@ -131,13 +158,13 @@ function ManageAdmin() {
           email: form.email,
           phoneNumber: form.phoneNumber,
           gender: form.gender,
-          role: adminRoleId,
+          role: form.role,
           ...(form.password ? { password: form.password } : {}),
         }) as any
       );
 
       if (updateAdmin.fulfilled.match(result)) {
-        dispatch(fetchAdmins({ page: currentPage, limit, search: debouncedSearch }) as any);
+        dispatch(fetchAdmins({ page: currentPage, limit, search: debouncedSearch, role: selectedRoleName }) as any);
         closeModal();
       }
       return;
@@ -150,7 +177,7 @@ function ManageAdmin() {
         password: form.password,
         phoneNumber: form.phoneNumber,
         gender: form.gender,
-        role: adminRoleId,
+        role: form.role,
       }) as any
     );
 
@@ -159,16 +186,16 @@ function ManageAdmin() {
         sent: result.payload.emailSent,
         message: result.payload.emailSent
           ? `Credentials were emailed to ${form.email}.`
-          : result.payload.emailError || "Admin created, but email could not be sent.",
+          : result.payload.emailError || "User created, but email could not be sent.",
       });
       dispatch(setAdminPage(1));
-      dispatch(fetchAdmins({ page: 1, limit, search: debouncedSearch }) as any);
+      dispatch(fetchAdmins({ page: 1, limit, search: debouncedSearch, role: selectedRoleName }) as any);
       closeModal();
     }
   }
 
   async function handleDelete(id: string) {
-    const sure = window.confirm("Are you sure you want to delete this admin?");
+    const sure = window.confirm("Are you sure you want to delete this user?");
     if (!sure) return;
     const result = await dispatch(deleteAdmin(id) as any);
 
@@ -192,14 +219,14 @@ function ManageAdmin() {
     <div className="flex h-full flex-col overflow-hidden bg-gray-50 p-8">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Manage Admins</h1>
-          <p className="mt-1 text-sm text-gray-400">Create and manage administrator accounts</p>
+          <h1 className="text-3xl font-bold text-gray-900">Manage Role Users</h1>
+          <p className="mt-1 text-sm text-gray-400">Create and manage admin and custom-role accounts</p>
         </div>
         <button
           onClick={openAddModal}
           className="flex items-center gap-2 rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-700"
         >
-          <Plus size={15} /> Add Admin
+          <Plus size={15} /> Add User
         </button>
       </div>
 
@@ -221,36 +248,55 @@ function ManageAdmin() {
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
         <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-base font-semibold text-gray-800">Admin Directory</h2>
+            <h2 className="text-base font-semibold text-gray-800">
+              {selectedRole ? `${selectedRole.name.charAt(0).toUpperCase() + selectedRole.name.slice(1)} Directory` : "Role Directory"}
+            </h2>
             <p className="mt-1 text-sm text-gray-400">
               Page {totalPages === 0 ? 0 : currentPage} of {totalPages}
             </p>
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-gray-500">
-            <span>Rows</span>
-            <select
-              value={limit}
-              onChange={(event) => dispatch(setAdminLimit(Number(event.target.value)))}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {[10, 20, 50, 100].map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <label className="flex items-center gap-2 text-sm text-gray-500">
+              <span>Role</span>
+              <select
+                value={selectedRoleName}
+                onChange={(event) => dispatch(setAdminRole(event.target.value))}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {manageableRoles.map((role: any) => (
+                  <option key={role._id} value={role.name}>
+                    {role.name.charAt(0).toUpperCase() + role.name.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex items-center gap-2 text-sm text-gray-500">
+              <span>Rows</span>
+              <select
+                value={limit}
+                onChange={(event) => dispatch(setAdminLimit(Number(event.target.value)))}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {[10, 20, 50, 100].map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </div>
 
         <TableContainer className="min-h-0 flex-1 overflow-auto">
           {loading && admins.length === 0 ? (
-            <div className="py-16 text-center text-sm text-gray-400">Loading admins...</div>
+            <div className="py-16 text-center text-sm text-gray-400">Loading users...</div>
           ) : (
             <Table>
               <TableHead>
                 <TableRow className="border-b border-gray-100 bg-gray-50">
-                  <TableHeader>Admin</TableHeader>
+                  <TableHeader>User</TableHeader>
                   <TableHeader>Contact</TableHeader>
                   <TableHeader>Gender</TableHeader>
                   <TableHeader>Role</TableHeader>
@@ -278,7 +324,7 @@ function ManageAdmin() {
                     <TableCell className="capitalize text-gray-600">{admin.gender}</TableCell>
                     <TableCell>
                       <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold capitalize text-amber-700">
-                        {admin.role?.name || "admin"}
+                        {admin.role?.name || selectedRoleName}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -303,7 +349,7 @@ function ManageAdmin() {
                 {admins.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={5} className="py-12 text-center text-sm text-gray-400">
-                      {pageError ? "Unable to load admins." : "No admins found."}
+                      {pageError ? "Unable to load users." : "No users found for this role."}
                     </TableCell>
                   </TableRow>
                 )}
@@ -318,7 +364,7 @@ function ManageAdmin() {
           startIndex={startIndex}
           endIndex={endIndex}
           totalItems={totalItems}
-          itemLabel="admins"
+          itemLabel="users"
           onPageChange={(page) => dispatch(setAdminPage(page))}
           onPrevious={() => dispatch(setAdminPage(currentPage - 1))}
           onNext={() => dispatch(setAdminPage(currentPage + 1))}
@@ -333,10 +379,10 @@ function ManageAdmin() {
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">
-                  {editAdmin ? "Edit Admin" : "Add Admin"}
+                  {editAdmin ? "Edit User" : "Add User"}
                 </h2>
                 <p className="mt-1 text-sm text-gray-400">
-                  {editAdmin ? "Update the admin details below" : "Create a new administrator account"}
+                  {editAdmin ? "Update the account details below" : "Create a new account for the selected role"}
                 </p>
               </div>
               <button
@@ -360,7 +406,7 @@ function ManageAdmin() {
                   value={form.name}
                   onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
                   className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter admin name"
+                  placeholder="Enter user name"
                 />
               </div>
 
@@ -371,7 +417,7 @@ function ManageAdmin() {
                   value={form.email}
                   onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
                   className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter admin email"
+                  placeholder="Enter user email"
                 />
               </div>
 
@@ -399,6 +445,23 @@ function ManageAdmin() {
               </div>
 
               <div className="sm:col-span-2">
+                <label className="mb-1 block text-sm font-medium text-gray-700">Role</label>
+                <select
+                  value={form.role}
+                  onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))}
+                  disabled={rolesLoading}
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <option value="">{rolesLoading ? "Loading roles..." : "Select role"}</option>
+                  {manageableRoles.map((role: any) => (
+                    <option key={role._id} value={role._id}>
+                      {role.name.charAt(0).toUpperCase() + role.name.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="sm:col-span-2">
                 <label className="mb-1 block text-sm font-medium text-gray-700">Gender</label>
                 <select
                   value={form.gender}
@@ -417,7 +480,7 @@ function ManageAdmin() {
               </div>
 
               <div className="sm:col-span-2 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                This account will be created with the Admin role.
+                Users created here can belong to admin or any custom role from the database.
               </div>
             </div>
 
@@ -430,10 +493,10 @@ function ManageAdmin() {
               </button>
               <button
                 onClick={handleSave}
-                disabled={loading || rolesLoading || !adminRoleId}
+                disabled={loading || rolesLoading || !form.role}
                 className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {loading ? "Saving..." : editAdmin ? "Update Admin" : "Create Admin"}
+                {loading ? "Saving..." : editAdmin ? "Update User" : "Create User"}
               </button>
             </div>
           </div>
@@ -444,7 +507,7 @@ function ManageAdmin() {
         <div className="fixed bottom-6 right-6 z-50 w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl">
           <div className="mb-3 flex items-start justify-between gap-4">
             <div>
-              <h3 className="text-base font-semibold text-gray-900">Admin Created</h3>
+              <h3 className="text-base font-semibold text-gray-900">User Created</h3>
               <p className="mt-1 text-xs text-gray-400">Credential email delivery status</p>
             </div>
             <button

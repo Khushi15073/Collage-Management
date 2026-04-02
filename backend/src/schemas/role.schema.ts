@@ -9,14 +9,8 @@ const roleSchema = new mongoose.Schema<IRole>(
             required: true,
             unique: true,
             trim: true,
-            enum: {
-                values: ["admin", "faculty", "student"],
-                message: "{VALUE} is not a valid role"
-            },
-            
         }
         ,
-
         description: {
             type: String,
             trim: true
@@ -36,4 +30,3 @@ const roleSchema = new mongoose.Schema<IRole>(
 
 
 export const RoleModel = mongoose.model<IRole>('Role', roleSchema)
-
