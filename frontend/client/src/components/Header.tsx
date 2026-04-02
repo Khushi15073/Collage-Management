@@ -1,6 +1,7 @@
 import { Bell } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUser } from "../features/authSlice";
+import { formatRoleName } from "../access/appAccess";
 import SearchField from "./ui/SearchField";
 
 type HeaderProps = {
@@ -45,7 +46,7 @@ export default function Header({ searchValue = "", onSearchChange }: HeaderProps
                 {user?.name || "Admin"}
               </div>
               <div className="text-xs text-gray-500">
-                {user?.role ? String(user.role).charAt(0).toUpperCase() + String(user.role).slice(1) : "Admin"}
+                {user?.role ? formatRoleName(String(user.role)) : "Admin"}
               </div>
             </div>
           </div>

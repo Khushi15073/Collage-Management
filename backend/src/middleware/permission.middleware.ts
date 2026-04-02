@@ -104,6 +104,10 @@ export function requirePermission(permissionName: string) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const role = await getCurrentUserRole(req);
+      if (role.name === "admin") {
+        return next();
+      }
+
       const grantedPermissions = new Set(
         (role.permissions || []).map((permission) => permission.name)
       );
@@ -140,6 +144,11 @@ export function requireRoleName(...allowedRoles: string[]) {
 export function requireUserPermission(action: UserAction) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const role = await getCurrentUserRole(req);
+      if (role.name === "admin") {
+        return next();
+      }
+
       const targetRoleName = await resolveTargetRoleName(req, action);
       const permissionName = buildUserPermissionName(action, targetRoleName);
 
@@ -147,7 +156,6 @@ export function requireUserPermission(action: UserAction) {
         throw AppError.forbidden("Permission mapping not available for this action");
       }
 
-      const role = await getCurrentUserRole(req);
       const grantedPermissions = new Set(
         (role.permissions || []).map((permission) => permission.name)
       );

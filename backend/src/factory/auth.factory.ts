@@ -72,10 +72,16 @@ export class authFactory {
     return UserModel
     .findOne({ email })
     .select("+password")   
-    .populate("role"); 
+    .populate({
+      path: "role",
+      populate: { path: "permissions" },
+    }); 
   }
 
   async findUserById(userId: string) {
-    return UserModel.findById(userId).populate("role");
+    return UserModel.findById(userId).populate({
+      path: "role",
+      populate: { path: "permissions" },
+    });
   }
 }

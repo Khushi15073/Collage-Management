@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUser } from "../features/authSlice";
+import { formatRoleName } from "../access/appAccess";
 import FacultySidebar from "../components/FacultySidebar";
 import { DashboardSearchProvider } from "../context/DashboardSearchContext";
 import SearchField from "../components/ui/SearchField";
@@ -66,7 +67,7 @@ function FacultyLayout({ children }: FacultyLayoutProps) {
                   <p className="text-sm font-semibold text-gray-800 leading-tight">
                     {user?.name || "Faculty"}
                   </p>
-                  <p className="text-xs text-gray-400">Faculty</p>
+                  <p className="text-xs text-gray-400">{formatRoleName(user?.role || "faculty")}</p>
                 </div>
               </div>
 

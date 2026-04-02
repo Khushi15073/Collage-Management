@@ -22,6 +22,7 @@ import {
 } from "../../components/ui/Table";
 import PaginationControls from "../../components/ui/PaginationControls";
 import { useDashboardSearch } from "../../context/DashboardSearchContext";
+import { hasPermission } from "../../access/appAccess";
 
 const emptyForm = {
   name: "",
@@ -47,6 +48,7 @@ function ManageStudents() {
   const roles = useSelector((state: any) => state.roles.roles);
   const rolesLoading = useSelector((state: any) => state.roles.loading);
   const roleError = useSelector((state: any) => state.roles.error);
+  const user = useSelector((state: any) => state.auth.user);
 
   const [showModal, setShowModal] = useState<boolean>(false);
   const [editStudent, setEditStudent] = useState<Student | null>(null);
@@ -202,6 +204,9 @@ function ManageStudents() {
   const endIndex = totalItems === 0 ? 0 : startIndex + students.length - 1;
   const canPreviousPage = currentPage > 1;
   const canNextPage = totalPages > 0 && currentPage < totalPages;
+  const canCreate = hasPermission(user, "create_students");
+  const canUpdate = hasPermission(user, "update_students");
+  const canDelete = hasPermission(user, "delete_students");
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-gray-50 p-8">
@@ -212,7 +217,8 @@ function ManageStudents() {
         </div>
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 bg-gray-900 hover:bg-gray-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition"
+          disabled={!canCreate}
+          className="flex items-center gap-2 bg-gray-900 hover:bg-gray-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition disabled:cursor-not-allowed disabled:bg-gray-400"
         >
           + Add Student
         </button>
@@ -289,13 +295,15 @@ function ManageStudents() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => openEditModal(student)}
-                          className="px-3 py-1 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition"
+                          disabled={!canUpdate}
+                          className="px-3 py-1 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => handleDelete(student._id)}
-                          className="px-3 py-1 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition"
+                          disabled={!canDelete}
+                          className="px-3 py-1 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           Delete
                         </button>
@@ -449,7 +457,7 @@ function ManageStudents() {
               </button>
               <button
                 onClick={handleSave}
-                disabled={loading}
+                disabled={loading || (editStudent ? !canUpdate : !canCreate)}
                 className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading ? "Saving..." : editStudent ? "Update Student" : "Create Student"}

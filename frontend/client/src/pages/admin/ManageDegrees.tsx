@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { fetchCourses } from "../../features/courseSlice";
 import { clearDegreeError, createDegree, fetchDegrees, updateDegree, deleteDegree } from "../../features/degreeSlice";
+import { hasPermission } from "../../access/appAccess";
 import type {
   DegreeCourse as AddedCourse,
   DegreeMode,
@@ -61,6 +62,7 @@ function ManageDegrees() {
   const degrees = useSelector((state: any) => state.degrees.degrees) as SavedDegree[];
   const degreeLoading = useSelector((state: any) => state.degrees.loading) as boolean;
   const degreeError = useSelector((state: any) => state.degrees.error) as string | null;
+  const user = useSelector((state: any) => state.auth.user);
 
   const [mode, setMode] = useState<'list' | 'create'>('list');
   const [degreeName, setDegreeName] = useState("");
@@ -121,6 +123,9 @@ function ManageDegrees() {
   );
 
   const latestSavedDegree = degrees[0] || null;
+  const canCreate = hasPermission(user, "create_degrees");
+  const canUpdate = hasPermission(user, "update_degrees");
+  const canDelete = hasPermission(user, "delete_degrees");
 
   function handleModeTypeChange(nextMode: DegreeMode) {
     setModeType(nextMode);
@@ -431,13 +436,14 @@ function ManageDegrees() {
                 <GraduationCap size={48} className="mx-auto text-gray-300" />
                 <h3 className="mt-4 text-lg font-semibold text-gray-900">No degrees found</h3>
                 <p className="mt-2 text-sm text-gray-500">Get started by creating your first degree.</p>
-                <button
-                  type="button"
-                  onClick={() => setMode('create')}
-                  className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-700"
-                >
-                  <Plus size={15} /> Create Degree
-                </button>
+	                <button
+	                  type="button"
+	                  onClick={() => setMode('create')}
+	                  disabled={!canCreate}
+	                  className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+	                >
+	                  <Plus size={15} /> Create Degree
+	                </button>
               </div>
             ) : (
               degrees.map((degree) => (
@@ -457,20 +463,22 @@ function ManageDegrees() {
                       </p>
                     </div>
                     <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(degree)}
-                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-50"
-                      >
-                        <Edit size={15} /> Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDeleteConfirmId(degree.id)}
-                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
-                      >
-                        <Trash2 size={15} /> Delete
-                      </button>
+	                      <button
+	                        type="button"
+	                        onClick={() => handleEdit(degree)}
+	                        disabled={!canUpdate}
+	                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+	                      >
+	                        <Edit size={15} /> Edit
+	                      </button>
+	                      <button
+	                        type="button"
+	                        onClick={() => setDeleteConfirmId(degree.id)}
+	                        disabled={!canDelete}
+	                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+	                      >
+	                        <Trash2 size={15} /> Delete
+	                      </button>
                     </div>
                   </div>
 
@@ -512,12 +520,12 @@ function ManageDegrees() {
                   >
                     Cancel
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteDegree(deleteConfirmId)}
-                    disabled={degreeLoading}
-                    className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
+	                  <button
+	                    type="button"
+	                    onClick={() => handleDeleteDegree(deleteConfirmId)}
+	                    disabled={degreeLoading || !canDelete}
+	                    className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+	                  >
                     {degreeLoading ? "Deleting..." : "Delete"}
                   </button>
                 </div>
@@ -543,12 +551,12 @@ function ManageDegrees() {
               >
                 Cancel
               </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={degreeLoading}
-                className="flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
+	              <button
+	                type="button"
+	                onClick={handleSave}
+	                disabled={degreeLoading || (editingDegreeId ? !canUpdate : !canCreate)}
+	                className="flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+	              >
                 <Save size={15} /> {degreeLoading ? (editingDegreeId ? "Updating..." : "Saving...") : (editingDegreeId ? "Update Degree" : "Save Degree")}
               </button>
             </div>
@@ -714,7 +722,7 @@ function ManageDegrees() {
                             <button
                               type="button"
                               onClick={() => addCourse(section.key)}
-                              disabled={!section.draft.name.trim() || !section.draft.code.trim() || errors.length > 0}
+                              disabled={!canCreate || !section.draft.name.trim() || !section.draft.code.trim() || errors.length > 0}
                               className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                               <BookPlus size={15} /> Add Course
@@ -755,7 +763,8 @@ function ManageDegrees() {
                                           <button
                                             type="button"
                                             onClick={() => saveEditCourse(section.key)}
-                                            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-green-600 transition hover:bg-green-50"
+                                            disabled={!canUpdate}
+                                            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-green-600 transition hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-40"
                                           >
                                             Save
                                           </button>
@@ -776,14 +785,16 @@ function ManageDegrees() {
                                           <button
                                             type="button"
                                             onClick={() => startEditCourse(course)}
-                                            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-blue-600 transition hover:bg-blue-50"
+                                            disabled={!canUpdate}
+                                            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
                                           >
                                             Edit
                                           </button>
                                           <button
                                             type="button"
                                             onClick={() => removeCourse(section.key, course.id)}
-                                            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                                            disabled={!(editingDegreeId ? canUpdate : canCreate)}
+                                            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
                                           >
                                             <Trash2 size={13} /> Remove
                                           </button>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUser } from "../features/authSlice";
+import { formatRoleName } from "../access/appAccess";
 import StudentSidebar from "../components/StudentSidebar"; 
 import { DashboardSearchProvider } from "../context/DashboardSearchContext";
 import { Bell } from "lucide-react";
@@ -67,7 +68,7 @@ function StudentLayout({ children }: StudentLayoutProps) {
                   <p className="text-sm font-semibold text-gray-800 leading-tight">
                     {user?.name || "Student"}
                   </p>
-                  <p className="text-xs text-gray-400">Student</p>
+                  <p className="text-xs text-gray-400">{formatRoleName(user?.role || "student")}</p>
                 </div>
               </div>
 

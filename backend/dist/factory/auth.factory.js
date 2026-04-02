@@ -53,10 +53,16 @@ class authFactory {
         return user_schema_1.default
             .findOne({ email })
             .select("+password")
-            .populate("role");
+            .populate({
+            path: "role",
+            populate: { path: "permissions" },
+        });
     }
     async findUserById(userId) {
-        return user_schema_1.default.findById(userId).populate("role");
+        return user_schema_1.default.findById(userId).populate({
+            path: "role",
+            populate: { path: "permissions" },
+        });
     }
 }
 exports.authFactory = authFactory;

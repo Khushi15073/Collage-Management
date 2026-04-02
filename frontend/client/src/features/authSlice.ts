@@ -1,16 +1,14 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
+import type { AuthUser } from "../access/appAccess";
 
 interface Role {
   _id?: string;
   name: string;
-}
-
-interface User {
-  _id?: string;
-  name: string;
-  email: string;
-  role: string;
+  permissions?: Array<{
+    _id?: string;
+    name: string;
+  }>;
 }
 
 interface AuthResponse {
@@ -21,7 +19,7 @@ interface AuthResponse {
       _id?: string;
       name: string;
       email: string;
-      role: Role | User["role"];
+      role: Role | AuthUser["role"];
     };
     accessToken: string;
     refreshToken: string;
@@ -44,7 +42,7 @@ interface SignUp {
 }
 
 interface AuthState {
-  user: User | null;
+  user: AuthUser | null;
   loading: boolean;
   error: string | null;
   initialized: boolean;
@@ -57,12 +55,20 @@ const initialState: AuthState = {
   initialized: false,
 };
 
-function normalizeUser(user: AuthResponse["data"]["user"]): User {
+function normalizeUser(user: AuthResponse["data"]["user"]): AuthUser {
+  const normalizedRole =
+    typeof user.role === "string"
+      ? { name: user.role, permissions: [] }
+      : user.role;
+
   return {
     _id: user._id,
     name: user.name,
     email: user.email,
-    role: typeof user.role === "string" ? user.role : user.role.name,
+    role: normalizedRole.name,
+    permissions: Array.isArray(normalizedRole.permissions)
+      ? normalizedRole.permissions.map((permission) => permission.name)
+      : [],
   };
 }
 

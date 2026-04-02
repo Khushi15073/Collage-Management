@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { initializeAuth } from './features/authSlice';
+import { canAccessPath, getLandingPath } from './access/appAccess';
 
 // ── Layouts ──
 import AdminLayout   from './layouts/adminLayout';
@@ -40,7 +41,13 @@ import MyAttendance     from './pages/student/Myattendance ';
 // ✅ ProtectedRoute
 // Redirects to login if user is not logged in
 // ─────────────────────────────────────────
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({
+  children,
+  path,
+}: {
+  children: React.ReactNode;
+  path: string;
+}) {
   const { user, initialized } = useSelector((state: any) => state.auth);
   if (!initialized) {
     return (
@@ -49,7 +56,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  return user ? <>{children}</> : <Navigate to="/login/admin" />;
+  if (!user) {
+    return <Navigate to="/login/admin" />;
+  }
+
+  return canAccessPath(user, path) ? <>{children}</> : <Navigate to={getLandingPath(user)} />;
 }
 
 // ─────────────────────────────────────────
@@ -70,14 +81,7 @@ function RoleRedirect() {
 
   if (!user) return <Navigate to="/login/admin" />;
 
-  // role can be object { name: "admin" } or plain string "admin"
-  const role = user?.role?.name || user?.role || "";
-
-  if (role === "admin")   return <Navigate to="/admin/dashboard" />;
-  if (role === "faculty") return <Navigate to="/faculty/dashboard" />;
-  if (role === "student") return <Navigate to="/student/dashboard" />;
-
-  return <Navigate to="/login/admin" />;
+  return <Navigate to={getLandingPath(user)} />;
 }
 
 // ─────────────────────────────────────────
@@ -106,27 +110,27 @@ function AppRoutes() {
       <Route path="/login/student" element={<StudentLogin />} />
 
       {/* ── Admin Protected Pages ── */}
-      <Route path="/admin/dashboard" element={<ProtectedRoute><AdminLayout><Dashboard /></AdminLayout></ProtectedRoute>} />
-      <Route path="/admins"          element={<ProtectedRoute><AdminLayout><ManageAdmin /></AdminLayout></ProtectedRoute>} />
-      <Route path="/students"        element={<ProtectedRoute><AdminLayout><ManageStudents /></AdminLayout></ProtectedRoute>} />
-      <Route path="/faculty"         element={<ProtectedRoute><AdminLayout><ManageFaculty /></AdminLayout></ProtectedRoute>} />
-      <Route path="/courses"         element={<ProtectedRoute><AdminLayout><ManageCourses /></AdminLayout></ProtectedRoute>} />
-      <Route path="/degrees"         element={<ProtectedRoute><AdminLayout><ManageDegrees /></AdminLayout></ProtectedRoute>} />
-      <Route path="/roles"           element={<ProtectedRoute><AdminLayout><RolesPermissions /></AdminLayout></ProtectedRoute>} />
-      <Route path="/help"            element={<ProtectedRoute><AdminLayout><HelpGuide /></AdminLayout></ProtectedRoute>} />
+      <Route path="/admin/dashboard" element={<ProtectedRoute path="/admin/dashboard"><AdminLayout><Dashboard /></AdminLayout></ProtectedRoute>} />
+      <Route path="/admins"          element={<ProtectedRoute path="/admins"><AdminLayout><ManageAdmin /></AdminLayout></ProtectedRoute>} />
+      <Route path="/students"        element={<ProtectedRoute path="/students"><AdminLayout><ManageStudents /></AdminLayout></ProtectedRoute>} />
+      <Route path="/faculty"         element={<ProtectedRoute path="/faculty"><AdminLayout><ManageFaculty /></AdminLayout></ProtectedRoute>} />
+      <Route path="/courses"         element={<ProtectedRoute path="/courses"><AdminLayout><ManageCourses /></AdminLayout></ProtectedRoute>} />
+      <Route path="/degrees"         element={<ProtectedRoute path="/degrees"><AdminLayout><ManageDegrees /></AdminLayout></ProtectedRoute>} />
+      <Route path="/roles"           element={<ProtectedRoute path="/roles"><AdminLayout><RolesPermissions /></AdminLayout></ProtectedRoute>} />
+      <Route path="/help"            element={<ProtectedRoute path="/help"><AdminLayout><HelpGuide /></AdminLayout></ProtectedRoute>} />
 
       {/* ── Faculty Protected Pages ── */}
-      <Route path="/faculty/dashboard"  element={<ProtectedRoute><FacultyLayout><FacultyDashboard /></FacultyLayout></ProtectedRoute>} />
-      <Route path="/faculty/classes"    element={<ProtectedRoute><FacultyLayout><MyClasses /></FacultyLayout></ProtectedRoute>} />
-      <Route path="/faculty/students"   element={<ProtectedRoute><FacultyLayout><StudentList /></FacultyLayout></ProtectedRoute>} />
-      <Route path="/faculty/attendance" element={<ProtectedRoute><FacultyLayout><MarkAttendance /></FacultyLayout></ProtectedRoute>} />
-      <Route path="/faculty/help"       element={<ProtectedRoute><FacultyLayout><HelpGuide /></FacultyLayout></ProtectedRoute>} />
+      <Route path="/faculty/dashboard"  element={<ProtectedRoute path="/faculty/dashboard"><FacultyLayout><FacultyDashboard /></FacultyLayout></ProtectedRoute>} />
+      <Route path="/faculty/classes"    element={<ProtectedRoute path="/faculty/classes"><FacultyLayout><MyClasses /></FacultyLayout></ProtectedRoute>} />
+      <Route path="/faculty/students"   element={<ProtectedRoute path="/faculty/students"><FacultyLayout><StudentList /></FacultyLayout></ProtectedRoute>} />
+      <Route path="/faculty/attendance" element={<ProtectedRoute path="/faculty/attendance"><FacultyLayout><MarkAttendance /></FacultyLayout></ProtectedRoute>} />
+      <Route path="/faculty/help"       element={<ProtectedRoute path="/faculty/help"><FacultyLayout><HelpGuide /></FacultyLayout></ProtectedRoute>} />
 
       {/* ── Student Protected Pages ── */}
-      <Route path="/student/dashboard"   element={<ProtectedRoute><StudentLayout><StudentDashboard /></StudentLayout></ProtectedRoute>} />
-      <Route path="/student/courses"     element={<ProtectedRoute><StudentLayout><MyCourses /></StudentLayout></ProtectedRoute>} />
-      <Route path="/student/attendance"  element={<ProtectedRoute><StudentLayout><MyAttendance /></StudentLayout></ProtectedRoute>} />
-      <Route path="/student/help"        element={<ProtectedRoute><StudentLayout><HelpGuide /></StudentLayout></ProtectedRoute>} />
+      <Route path="/student/dashboard"   element={<ProtectedRoute path="/student/dashboard"><StudentLayout><StudentDashboard /></StudentLayout></ProtectedRoute>} />
+      <Route path="/student/courses"     element={<ProtectedRoute path="/student/courses"><StudentLayout><MyCourses /></StudentLayout></ProtectedRoute>} />
+      <Route path="/student/attendance"  element={<ProtectedRoute path="/student/attendance"><StudentLayout><MyAttendance /></StudentLayout></ProtectedRoute>} />
+      <Route path="/student/help"        element={<ProtectedRoute path="/student/help"><StudentLayout><HelpGuide /></StudentLayout></ProtectedRoute>} />
 
       {/* ── 404 ── */}
       <Route path="*" element={

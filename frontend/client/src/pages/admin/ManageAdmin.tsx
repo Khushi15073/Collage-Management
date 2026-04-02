@@ -24,6 +24,7 @@ import {
 } from "../../components/ui/Table";
 import PaginationControls from "../../components/ui/PaginationControls";
 import { useDashboardSearch } from "../../context/DashboardSearchContext";
+import { hasPermission } from "../../access/appAccess";
 
 const emptyForm = {
   name: "",
@@ -49,6 +50,7 @@ function ManageAdmin() {
   const roles = useSelector((state: any) => state.roles.roles);
   const rolesLoading = useSelector((state: any) => state.roles.loading);
   const roleError = useSelector((state: any) => state.roles.error);
+  const user = useSelector((state: any) => state.auth.user);
 
   const [showModal, setShowModal] = useState(false);
   const [editAdmin, setEditAdmin] = useState<AdminUser | null>(null);
@@ -214,6 +216,9 @@ function ManageAdmin() {
   const endIndex = totalItems === 0 ? 0 : startIndex + admins.length - 1;
   const canPreviousPage = currentPage > 1;
   const canNextPage = totalPages > 0 && currentPage < totalPages;
+  const canCreate = hasPermission(user, "create_admins");
+  const canUpdate = hasPermission(user, "update_admins");
+  const canDelete = hasPermission(user, "delete_admins");
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-gray-50 p-8">
@@ -224,7 +229,8 @@ function ManageAdmin() {
         </div>
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-700"
+          disabled={!canCreate}
+          className="flex items-center gap-2 rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:bg-gray-400"
         >
           <Plus size={15} /> Add User
         </button>
@@ -331,13 +337,15 @@ function ManageAdmin() {
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => openEditModal(admin)}
-                          className="text-gray-400 transition hover:text-blue-600"
+                          disabled={!canUpdate}
+                          className="text-gray-400 transition hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           <UserCog size={15} />
                         </button>
                         <button
                           onClick={() => handleDelete(admin._id)}
-                          className="text-gray-400 transition hover:text-red-600"
+                          disabled={!canDelete}
+                          className="text-gray-400 transition hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           <Trash2 size={15} />
                         </button>
@@ -493,7 +501,7 @@ function ManageAdmin() {
               </button>
               <button
                 onClick={handleSave}
-                disabled={loading || rolesLoading || !form.role}
+                disabled={loading || rolesLoading || !form.role || (editAdmin ? !canUpdate : !canCreate)}
                 className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading ? "Saving..." : editAdmin ? "Update User" : "Create User"}

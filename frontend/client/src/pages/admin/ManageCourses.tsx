@@ -28,6 +28,7 @@ import { usePagination } from "../../hooks/usePagination";
 import { useDashboardSearch } from "../../context/DashboardSearchContext";
 import { matchesSearchQuery } from "../../utils/search";
 import SearchField from "../../components/ui/SearchField";
+import { hasPermission } from "../../access/appAccess";
 
 const emptyForm = {
   code: "",
@@ -65,6 +66,7 @@ function ManageCourses() {
   const students = useSelector((state: any) => state.students.students) as Student[];
   const studentsLoading = useSelector((state: any) => state.students.loading) as boolean;
   const studentsError = useSelector((state: any) => state.students.error) as string | null;
+  const user = useSelector((state: any) => state.auth.user);
 
   const [showModal, setShowModal] = useState(false);
   const [editCourse, setEditCourse] = useState<Course | null>(null);
@@ -117,6 +119,9 @@ function ManageCourses() {
     nextPage,
     previousPage,
   } = usePagination(filteredCourses, 8);
+  const canCreate = hasPermission(user, "create_courses");
+  const canUpdate = hasPermission(user, "update_courses");
+  const canDelete = hasPermission(user, "delete_courses");
 
   function resetForm() {
     setForm(emptyForm);
@@ -312,7 +317,8 @@ function ManageCourses() {
         </div>
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 bg-gray-900 hover:bg-gray-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition"
+          disabled={!canCreate}
+          className="flex items-center gap-2 bg-gray-900 hover:bg-gray-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition disabled:cursor-not-allowed disabled:bg-gray-400"
         >
           <Plus size={15} /> Add Course
         </button>
@@ -389,13 +395,15 @@ function ManageCourses() {
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => openEditModal(course)}
-                          className="text-gray-400 hover:text-blue-600 transition"
+                          disabled={!canUpdate}
+                          className="text-gray-400 hover:text-blue-600 transition disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           <Pencil size={15} />
                         </button>
                         <button
                           onClick={() => handleDelete(course._id)}
-                          className="text-gray-400 hover:text-red-600 transition"
+                          disabled={!canDelete}
+                          className="text-gray-400 hover:text-red-600 transition disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           <Trash2 size={15} />
                         </button>
@@ -628,7 +636,7 @@ function ManageCourses() {
               </button>
               <button
                 onClick={handleSave}
-                disabled={loading}
+                disabled={loading || (editCourse ? !canUpdate : !canCreate)}
                 className="flex-1 bg-gray-900 hover:bg-gray-700 disabled:bg-gray-400 text-white rounded-lg py-2.5 text-sm font-semibold transition"
               >
                 {editCourse ? "Save Changes" : "Add Course"}

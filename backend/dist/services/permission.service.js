@@ -8,10 +8,20 @@ const responseCodes_1 = require("../enums/responseCodes");
 const permission_factory_1 = require("../factory/permission.factory");
 const errorClass_1 = require("../utility/errorClass");
 const responseHandler_1 = __importDefault(require("../utility/responseHandler"));
+const role_schema_1 = require("../schemas/role.schema");
 const accessControl_1 = require("../constants/accessControl");
 class PermissionService {
     constructor() {
         this.permissionFactory = new permission_factory_1.PermissionFactory();
+    }
+    async assignAllPermissionsToAdminRole() {
+        const allPermissions = await this.permissionFactory.getAllPermission();
+        const adminRole = await role_schema_1.RoleModel.findOne({ name: "admin" });
+        if (!adminRole) {
+            return;
+        }
+        adminRole.permissions = allPermissions.map((permission) => permission._id);
+        await adminRole.save();
     }
     mapPermissionWithMetadata(permission) {
         const definition = (0, accessControl_1.getPermissionDefinition)(permission.name);
@@ -30,6 +40,7 @@ class PermissionService {
             }
             await this.permissionFactory.findUserByName(permissionData.name);
             const result = await this.permissionFactory.createPermission(permissionData);
+            await this.assignAllPermissionsToAdminRole();
             return result;
         }
         catch (error) {
@@ -62,6 +73,7 @@ class PermissionService {
                 });
             }
             const refreshedPermissions = await this.permissionFactory.getAllPermission();
+            await this.assignAllPermissionsToAdminRole();
             const normalizedPermissions = refreshedPermissions
                 .map((permission) => this.mapPermissionWithMetadata(permission))
                 .filter((permission) => (0, accessControl_1.getPermissionDefinition)(permission.name) != null);

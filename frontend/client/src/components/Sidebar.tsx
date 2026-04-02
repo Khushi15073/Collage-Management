@@ -1,9 +1,9 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector } from "react-redux";
 import {
-  LayoutDashboard, Users, UsersRound, BookOpen,
-  Settings, HelpCircle, ChevronLeft, ChevronRight, GraduationCap
+  ChevronLeft, ChevronRight, GraduationCap
 } from 'lucide-react';
+import { formatRoleName, getVisibleNavItems } from "../access/appAccess";
 
 // ✅ Props the Sidebar receives from App.tsx
 interface SidebarProps {
@@ -11,27 +11,9 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
-// ✅ Each menu item now has a "path" for navigation
-interface MenuItem {
-  icon: React.ElementType;
-  label: string;
-  path: string;
-}
-
-// ✅ Menu items with their routes
-const menuItems: MenuItem[] = [
-  { icon: LayoutDashboard, label: 'Dashboard',          path: '/'            },
-  { icon: UsersRound,      label: 'Manage Admins',      path: '/admins'      },
-  { icon: Users,           label: 'Manage Students',    path: '/students'    },
-  { icon: UsersRound,      label: 'Manage Faculty',     path: '/faculty'     },
-  { icon: BookOpen,        label: 'Manage Courses',     path: '/courses'     },
-  { icon: GraduationCap,   label: 'Create Degree',      path: '/degrees'     },
-  { icon: Settings,        label: 'Roles & Permissions',path: '/roles'       },
-  { icon: HelpCircle,      label: 'Help & Guide',       path: '/help'        },
-];
-
 export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const user = useSelector((state: any) => state.auth.user);
+  const menuItems = getVisibleNavItems(user, "admin");
 
   const navigate = useNavigate();
 
@@ -76,6 +58,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
           // ✅ Check if this item matches the current URL
           const isActive = location.pathname === item.path;
+          const Icon = item.icon;
 
           return (
             <button
@@ -91,7 +74,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
               `}
             >
               {isCollapsed ? (
-                <item.icon className="w-4 h-4 flex-shrink-0" />
+                <Icon className="w-4 h-4 flex-shrink-0" />
               ) : (
                 <span className="text-sm font-medium">{item.label}</span>
               )}
@@ -105,7 +88,7 @@ export default function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         <div className="p-4 border-t border-gray-200">
           <div className="text-xs text-gray-500 mb-1">Current Role</div>
           <div className="text-sm font-semibold text-blue-600">
-            {user?.role ? String(user.role).charAt(0).toUpperCase() + String(user.role).slice(1) : "Admin"}
+            {user?.role ? formatRoleName(String(user.role)) : "Admin"}
           </div>
         </div>
       )}

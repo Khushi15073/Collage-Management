@@ -82,6 +82,9 @@ function requirePermission(permissionName) {
     return async (req, res, next) => {
         try {
             const role = await getCurrentUserRole(req);
+            if (role.name === "admin") {
+                return next();
+            }
             const grantedPermissions = new Set((role.permissions || []).map((permission) => permission.name));
             if (grantedPermissions.has(permissionName) === false) {
                 throw errorClass_1.AppError.forbidden(`Permission denied: ${permissionName}`);
@@ -111,12 +114,15 @@ function requireRoleName(...allowedRoles) {
 function requireUserPermission(action) {
     return async (req, res, next) => {
         try {
+            const role = await getCurrentUserRole(req);
+            if (role.name === "admin") {
+                return next();
+            }
             const targetRoleName = await resolveTargetRoleName(req, action);
             const permissionName = buildUserPermissionName(action, targetRoleName);
             if (!permissionName) {
                 throw errorClass_1.AppError.forbidden("Permission mapping not available for this action");
             }
-            const role = await getCurrentUserRole(req);
             const grantedPermissions = new Set((role.permissions || []).map((permission) => permission.name));
             if (grantedPermissions.has(permissionName) === false) {
                 throw errorClass_1.AppError.forbidden(`Permission denied: ${permissionName}`);

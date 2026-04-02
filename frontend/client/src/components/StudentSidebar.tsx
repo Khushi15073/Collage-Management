@@ -1,12 +1,6 @@
-import { BookOpen, HelpCircle, LayoutDashboard, ListChecks } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-
-const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/student/dashboard" },
-  { icon: BookOpen, label: "My Courses", path: "/student/courses" },
-  { icon: ListChecks, label: "My Attendance", path: "/student/attendance" },
-  { icon: HelpCircle, label: "Help & Guide", path: "/student/help" },
-];
+import { useSelector } from "react-redux";
+import { formatRoleName, getVisibleNavItems } from "../access/appAccess";
 
 interface StudentSidebarProps {
   collapsed: boolean;
@@ -14,6 +8,8 @@ interface StudentSidebarProps {
 }
 
 function StudentSidebar({ collapsed, onToggle }: StudentSidebarProps) {
+  const user = useSelector((state: any) => state.auth.user);
+  const menuItems = getVisibleNavItems(user, "student");
   const navigate  = useNavigate();
   const location  = useLocation();
 
@@ -69,7 +65,7 @@ function StudentSidebar({ collapsed, onToggle }: StudentSidebarProps) {
       {!collapsed && (
         <div className="px-4 py-4 border-t border-gray-100">
           <p className="text-xs text-gray-400 mb-1">Current Role</p>
-          <p className="text-sm font-semibold text-blue-600">Student</p>
+          <p className="text-sm font-semibold text-blue-600">{formatRoleName(user?.role || "student")}</p>
         </div>
       )}
     </aside>

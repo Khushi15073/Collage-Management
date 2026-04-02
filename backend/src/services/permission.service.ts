@@ -3,6 +3,7 @@ import { PermissionFactory } from "../factory/permission.factory";
 import { CreatePermissionDTO, UpdatePermissionDTO } from "../interfaces/permission.interface";
 import { AppError } from "../utility/errorClass";
 import ResponseHandler from "../utility/responseHandler";
+import { RoleModel } from "../schemas/role.schema";
 import {
     DEFAULT_PERMISSIONS,
     formatPermissionLabel,
@@ -13,6 +14,18 @@ import {
 export class PermissionService {
 
     private permissionFactory = new PermissionFactory()
+
+    private async assignAllPermissionsToAdminRole() {
+        const allPermissions = await this.permissionFactory.getAllPermission();
+        const adminRole = await RoleModel.findOne({ name: "admin" });
+
+        if (!adminRole) {
+            return;
+        }
+
+        adminRole.permissions = allPermissions.map((permission: any) => permission._id);
+        await adminRole.save();
+    }
 
     private mapPermissionWithMetadata(permission: any) {
         const definition = getPermissionDefinition(permission.name);
@@ -34,6 +47,7 @@ export class PermissionService {
 
             await this.permissionFactory.findUserByName(permissionData.name)
             const result = await this.permissionFactory.createPermission(permissionData)
+            await this.assignAllPermissionsToAdminRole();
 
             return result
         } catch (error) {
@@ -75,6 +89,7 @@ export class PermissionService {
             }
 
             const refreshedPermissions = await this.permissionFactory.getAllPermission();
+            await this.assignAllPermissionsToAdminRole();
             const normalizedPermissions = refreshedPermissions
                 .map((permission) => this.mapPermissionWithMetadata(permission))
                 .filter((permission) => getPermissionDefinition(permission.name) != null);

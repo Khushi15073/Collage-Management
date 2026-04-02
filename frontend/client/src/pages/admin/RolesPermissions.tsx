@@ -7,6 +7,7 @@ import { createPermission, syncDefaultPermissions } from "../../features/permiss
 import type { Permission } from "../../features/permissionSlice";
 import StatsStrip from "../../components/StatsStrip";
 import { useDashboardSearch } from "../../context/DashboardSearchContext";
+import { hasPermission } from "../../access/appAccess";
 
 function formatRoleName(roleName: string) {
   return roleName.charAt(0).toUpperCase() + roleName.slice(1);
@@ -30,6 +31,7 @@ function RolesPermissions() {
   const permissions = useSelector((state: any) => state.permissions.permissions) as Permission[];
   const permissionsLoading = useSelector((state: any) => state.permissions.loading) as boolean;
   const permissionsError = useSelector((state: any) => state.permissions.error) as string | null;
+  const user = useSelector((state: any) => state.auth.user);
 
   const [activeRoleId, setActiveRoleId] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<Record<string, boolean>>({});
@@ -227,6 +229,9 @@ function RolesPermissions() {
 
   const pageError = rolesError || permissionsError;
   const loading = rolesLoading || permissionsLoading;
+  const canCreateRole = hasPermission(user, "create_admins");
+  const canUpdateRolePermissions = hasPermission(user, "update_admins");
+  const canCreatePermission = hasPermission(user, "create_permissions");
 
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-gray-50 p-8">
@@ -237,7 +242,7 @@ function RolesPermissions() {
         </div>
         <button
           onClick={handleSave}
-          disabled={loading || activeRole == null}
+          disabled={loading || activeRole == null || !canUpdateRolePermissions}
           className="flex items-center gap-2 bg-gray-900 hover:bg-gray-700 disabled:bg-gray-400 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition"
         >
           <Check size={15} /> Save Changes
@@ -342,7 +347,7 @@ function RolesPermissions() {
               <button
                 type="button"
                 onClick={handleCreateRole}
-                disabled={loading || newRoleName.trim() === ""}
+                disabled={loading || newRoleName.trim() === "" || !canCreateRole}
                 className="flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:bg-gray-400"
               >
                 <Plus size={15} /> Create Role
@@ -373,7 +378,7 @@ function RolesPermissions() {
               <button
                 type="button"
                 onClick={handleCreatePermission}
-                disabled={loading || newPermissionName.trim() === ""}
+                disabled={loading || newPermissionName.trim() === "" || !canCreatePermission}
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Plus size={15} /> Create Permission
@@ -425,9 +430,10 @@ function RolesPermissions() {
 
                         <button
                           onClick={() => togglePermission(permission.name)}
+                          disabled={!canUpdateRolePermissions}
                           className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
                             isOn ? "bg-green-500" : "bg-gray-300"
-                          }`}
+                          } disabled:cursor-not-allowed disabled:opacity-50`}
                         >
                           <span
                             className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${

@@ -23,11 +23,12 @@ function AdminLogin() {
     if (loginUser.fulfilled.match(result)) {
       const role = result.payload?.data?.user?.role;
 
-      if (role === "admin") {
-        navigate("/admin/dashboard");
-      } else {
+      if (role === "faculty" || role === "student") {
         alert("Access denied. This portal is for Admins only.");
+        return;
       }
+
+      navigate("/");
     }
   }
 

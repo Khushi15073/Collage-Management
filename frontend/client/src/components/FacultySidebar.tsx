@@ -1,13 +1,6 @@
-import { BookOpen, GraduationCap, HelpCircle, LayoutDashboard, ListChecks } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-
-const menuItems = [
-  { label: "Dashboard",       icon: LayoutDashboard, path: "/faculty/dashboard"  },
-  { label: "My Classes",      icon: BookOpen,        path: "/faculty/classes"    },
-  { label: "Student List",    icon: GraduationCap,   path: "/faculty/students"   },
-  { label: "Mark Attendance", icon: ListChecks,      path: "/faculty/attendance" },
-  { label: "Help & Guide",    icon: HelpCircle,      path: "/faculty/help"       },
-];
+import { useSelector } from "react-redux";
+import { formatRoleName, getVisibleNavItems } from "../access/appAccess";
 
 interface FacultySidebarProps {
   collapsed: boolean;
@@ -15,6 +8,8 @@ interface FacultySidebarProps {
 }
 
 function FacultySidebar({ collapsed, onToggle }: FacultySidebarProps) {
+  const user = useSelector((state: any) => state.auth.user);
+  const menuItems = getVisibleNavItems(user, "faculty");
   const navigate  = useNavigate();
   const location  = useLocation();
 
@@ -71,7 +66,7 @@ function FacultySidebar({ collapsed, onToggle }: FacultySidebarProps) {
       {!collapsed && (
         <div className="px-4 py-4 border-t border-gray-100">
           <p className="text-xs text-gray-400 mb-1">Current Role</p>
-          <p className="text-sm font-semibold text-blue-600">Faculty</p>
+          <p className="text-sm font-semibold text-blue-600">{formatRoleName(user?.role || "faculty")}</p>
         </div>
       )}
     </aside>
