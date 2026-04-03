@@ -431,7 +431,11 @@ function ManageDegrees() {
           )}
 
           <div className="space-y-4">
-            {degrees.length === 0 ? (
+            {degreeLoading ? (
+              <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center">
+                <div className="text-sm text-gray-500">Loading degrees...</div>
+              </div>
+            ) : degrees.length === 0 ? (
               <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center">
                 <GraduationCap size={48} className="mx-auto text-gray-300" />
                 <h3 className="mt-4 text-lg font-semibold text-gray-900">No degrees found</h3>
