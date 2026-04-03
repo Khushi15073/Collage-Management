@@ -48,8 +48,44 @@ interface AuthState {
   initialized: boolean;
 }
 
+const AUTH_STORAGE_KEY = "cms_auth_user";
+
+function loadPersistedUser(): AuthUser | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!rawValue) {
+      return null;
+    }
+
+    return JSON.parse(rawValue) as AuthUser;
+  } catch {
+    return null;
+  }
+}
+
+function persistUser(user: AuthUser | null) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    if (user) {
+      window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+      return;
+    }
+
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+  } catch {
+    // Ignore storage errors and continue with in-memory auth state.
+  }
+}
+
 const initialState: AuthState = {
-  user: null,
+  user: loadPersistedUser(),
   loading: false,
   error: null,
   initialized: false,
@@ -170,6 +206,7 @@ const authSlice = createSlice({
     logout: (state) => {
       state.user = null;
       state.error = null;
+      persistUser(null);
     },
   },
   extraReducers: (builder) => {
@@ -182,6 +219,7 @@ const authSlice = createSlice({
         state.loading = false;
         state.user = normalizeUser(action.payload.data.user);
         state.initialized = true;
+        persistUser(state.user);
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
@@ -194,8 +232,9 @@ const authSlice = createSlice({
       })
       .addCase(signUser.fulfilled, (state, action) => {
         state.loading = false;
-        state.user = action.payload.data.user;
+        state.user = normalizeUser(action.payload.data.user);
         state.initialized = true;
+        persistUser(state.user);
       })
       .addCase(signUser.rejected, (state, action) => {
         state.loading = false;
@@ -207,12 +246,14 @@ const authSlice = createSlice({
         state.user = null;
         state.error = null;
         state.initialized = true;
+        persistUser(null);
       })
       .addCase(logoutUser.rejected, (state) => {
         state.loading = false;
         state.user = null;
         state.error = null;
         state.initialized = true;
+        persistUser(null);
       })
       .addCase(initializeAuth.pending, (state) => {
         state.loading = true;
@@ -222,12 +263,14 @@ const authSlice = createSlice({
         state.loading = false;
         state.user = action.payload;
         state.initialized = true;
+        persistUser(action.payload);
       })
       .addCase(initializeAuth.rejected, (state, action) => {
         state.loading = false;
         state.user = null;
         state.error = (action.payload as string) || null;
         state.initialized = true;
+        persistUser(null);
       });
   },
 });

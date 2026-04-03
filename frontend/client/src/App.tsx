@@ -49,7 +49,7 @@ function ProtectedRoute({
   path: string;
 }) {
   const { user, initialized } = useSelector((state: any) => state.auth);
-  if (!initialized) {
+  if (!initialized && !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 text-sm text-gray-500">
         Restoring session...
@@ -71,7 +71,7 @@ function ProtectedRoute({
 function RoleRedirect() {
   const { user, initialized } = useSelector((state: any) => state.auth);
 
-  if (!initialized) {
+  if (!initialized && !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 text-sm text-gray-500">
         Restoring session...
