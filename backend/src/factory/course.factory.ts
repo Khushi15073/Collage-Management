@@ -29,23 +29,6 @@ export class CourseFactory {
     return CourseModel.find(query).select("code");
   }
 
-  async findFacultyScheduleConflict(
-    instructorId: string,
-    schedule: string,
-    excludeCourseId?: string
-  ) {
-    const query: Record<string, unknown> = {
-      instructor: instructorId,
-      schedule,
-    };
-
-    if (excludeCourseId) {
-      query._id = { $ne: excludeCourseId };
-    }
-
-    return CourseModel.findOne(query).populate("instructor", "name email");
-  }
-
   // ── Find course by ID ──
   async findCourseById(id: string) {
     return CourseModel
@@ -147,7 +130,6 @@ export class CourseFactory {
               sourceSectionKey: course.sourceSectionKey,
             },
             $setOnInsert: {
-              schedule: "",
               credits: 0,
               total: 50,
               enrolled: 0,

@@ -14,7 +14,6 @@ type FacultyCourse = {
   code: string;
   name: string;
   department: string;
-  schedule: string;
   status: "Active" | "Inactive" | "Full";
   enrolled: number;
   total: number;
@@ -99,7 +98,6 @@ function FacultyDashboard() {
         course.code,
         course.name,
         course.department,
-        course.schedule,
         course.status,
         String(course.enrolled),
         String(course.total),
@@ -173,10 +171,9 @@ function FacultyDashboard() {
                       {course.status}
                     </span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 mb-3">
+                  <div className="mb-3 flex flex-wrap items-center gap-4 text-xs text-gray-500">
                     <span>{course.department}</span>
                     <span>{course.enrolled} students</span>
-                    <span>{course.schedule}</span>
                   </div>
                   <div className="flex">
                     <button

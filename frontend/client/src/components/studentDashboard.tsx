@@ -30,7 +30,6 @@ type StudentDashboardSummary = {
     code: string;
     name: string;
     department: string;
-    schedule: string;
     credits: number;
     status: string;
     instructorName: string;
@@ -138,7 +137,6 @@ function StudentDashboard() {
           course.code,
           course.name,
           course.department,
-          course.schedule,
           course.status,
           course.instructorName,
           course.credits,
@@ -313,7 +311,6 @@ function StudentDashboard() {
                   <div className="space-y-1 text-xs text-gray-500">
                     <div>{course.department}</div>
                     <div>{course.instructorName}</div>
-                    <div>{course.schedule}</div>
                   </div>
                 </div>
               ))}

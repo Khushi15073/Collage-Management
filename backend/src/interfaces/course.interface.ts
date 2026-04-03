@@ -2,7 +2,6 @@
 export interface CreateCourseDTO {
   code:       string;
   name:       string;
-  schedule:   string;
   department: string;
   instructor: string;  // faculty userId
   students?:  string[];
@@ -16,7 +15,6 @@ export interface CreateCourseDTO {
 export interface UpdateCourseDTO {
   code?:       string;
   name?:       string;
-  schedule?:   string;
   department?: string;
   instructor?: string;
   students?:   string[];

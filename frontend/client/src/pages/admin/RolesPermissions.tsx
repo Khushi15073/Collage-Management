@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { Check, Plus } from "lucide-react";
 import { createRole, fetchRoles, updateRolePermissions } from "../../features/roleSlice";
 import type { Role } from "../../features/roleSlice";
-import { createPermission, syncDefaultPermissions } from "../../features/permissionSlice";
+import { createPermission, fetchPermissions, syncDefaultPermissions } from "../../features/permissionSlice";
 import type { Permission } from "../../features/permissionSlice";
 import StatsStrip from "../../components/StatsStrip";
 import { useDashboardSearch } from "../../context/DashboardSearchContext";
@@ -11,6 +11,14 @@ import { hasPermission } from "../../access/appAccess";
 
 function formatRoleName(roleName: string) {
   return roleName.charAt(0).toUpperCase() + roleName.slice(1);
+}
+
+function permissionGridClass(count: number) {
+  if (count === 3) {
+    return "grid gap-1.5 md:grid-cols-2";
+  }
+
+  return "grid gap-1.5 md:grid-cols-2 xl:grid-cols-3";
 }
 
 const HIDDEN_PERMISSION_SECTIONS = new Set(["Reports", "Custom"]);
@@ -45,15 +53,23 @@ function RolesPermissions() {
   const [showCreateRolePanel, setShowCreateRolePanel] = useState(false);
 
   useEffect(() => {
-    dispatch(fetchRoles() as any);
-    dispatch(syncDefaultPermissions() as any);
-  }, []);
+    let isMounted = true;
 
-  useEffect(() => {
-    if (roles.length > 0 && activeRoleId === "") {
-      setActiveRoleId(roles[0]._id);
+    async function loadRolePermissionData() {
+      await dispatch(fetchRoles() as any);
+      await dispatch(syncDefaultPermissions() as any);
+
+      if (isMounted) {
+        dispatch(fetchPermissions() as any);
+      }
     }
-  }, [roles, activeRoleId]);
+
+    loadRolePermissionData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const permissionIdByName = useMemo(() => {
     return permissions.reduce<Record<string, string>>((accumulator, permission) => {
@@ -258,7 +274,7 @@ function RolesPermissions() {
             type="button"
             onClick={() => setShowCreateRolePanel(true)}
             disabled={!canCreateRole}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex items-center gap-2 rounded-lg bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Plus size={15} /> Add New Role
           </button>
@@ -305,67 +321,80 @@ function RolesPermissions() {
         </div>
 
         <div className="px-6 pt-5">
-          <div className="flex min-w-max overflow-x-auto rounded-xl bg-gray-100 p-1">
-            {roles.map((role) => (
-              <button
-                key={role._id}
-                onClick={() => setActiveRoleId(role._id)}
-                className={`min-w-[140px] flex-1 py-2.5 rounded-lg text-sm font-semibold transition ${
-                  activeRoleId === role._id
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
+          <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+            <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-gray-400">Select Role</div>
+              <select
+                value={activeRoleId}
+                onChange={(event) => setActiveRoleId(event.target.value)}
+                disabled={loading || roles.length === 0}
+                className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {formatRoleName(role.name)}
-              </button>
-            ))}
+                <option value="">
+                  {loading ? "Loading roles..." : "Please select a role"}
+                </option>
+                {roles.map((role) => (
+                  <option key={role._id} value={role._id}>
+                    {formatRoleName(role.name)}
+                  </option>
+                ))}
+              </select>
+              <div className="mt-3 text-xs text-gray-500">
+                {activeRole
+                  ? `${countOn(activeRole)} visible permissions assigned`
+                  : "Choose a role to configure its permissions."}
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="px-6 py-5 space-y-7">
+        <div className="px-6 py-4 space-y-4">
           {loading && (
             <p className="text-sm text-gray-400">Loading roles and permissions...</p>
           )}
 
-          {!loading &&
+          {!loading && activeRole == null && (
+            <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-5 py-10 text-center text-sm text-gray-500">
+              Please select a role to display permissions for that role.
+            </div>
+          )}
+
+          {!loading && activeRole != null &&
             filteredPermissionGroups.map((group) => (
               <div key={group.section}>
-                <h3 className="text-base font-bold text-gray-800 mb-3">{group.section}</h3>
-                <div className="space-y-2">
+                <h3 className="mb-2 text-sm font-bold text-gray-800">{group.section}</h3>
+                <div className="grid gap-1.5 lg:grid-cols-4">
                   {group.permissions.map((permission) => {
                     const isOn = selectedPermissions[permission.name] || false;
 
                     return (
-                      <div
+                      <button
                         key={permission._id}
-                        className="flex items-center justify-between border border-gray-100 rounded-xl px-5 py-4 hover:bg-gray-50 transition"
+                        type="button"
+                        onClick={() => togglePermission(permission.name)}
+                        disabled={!canUpdateRolePermissions}
+                        className={`flex w-full items-start rounded-lg border px-3 py-2.5 text-left transition ${
+                          isOn
+                            ? "border-blue-200 bg-blue-50"
+                            : "border-gray-200 bg-white hover:bg-gray-50"
+                        } disabled:cursor-not-allowed disabled:opacity-50`}
                       >
-                        <div>
-                          <p className="text-sm font-semibold text-gray-800">{permission.label}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">{permission.description}</p>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold leading-5 text-gray-800">{permission.label}</p>
+                          {permission.description && (
+                            <p className="mt-0.5 line-clamp-2 text-xs leading-4 text-gray-400">
+                              {permission.description}
+                            </p>
+                          )}
                         </div>
-
-                        <button
-                          onClick={() => togglePermission(permission.name)}
-                          disabled={!canUpdateRolePermissions}
-                          className={`relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
-                            isOn ? "bg-green-500" : "bg-gray-300"
-                          } disabled:cursor-not-allowed disabled:opacity-50`}
-                        >
-                          <span
-                            className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${
-                              isOn ? "translate-x-6" : ""
-                            }`}
-                          />
-                        </button>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
               </div>
             ))}
 
-          {!loading && filteredPermissionGroups.length === 0 && (
+          {!loading && activeRole != null && filteredPermissionGroups.length === 0 && (
             <p className="text-sm text-gray-400">No permissions match your search.</p>
           )}
         </div>
@@ -470,7 +499,7 @@ function RolesPermissions() {
                     {Object.values(newRolePermissions).filter(Boolean).length} selected
                   </span>
                 </div>
-                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                <div className={permissionGridClass(visiblePermissions.length)}>
                   {visiblePermissions.map((permission) => {
                     const isOn = newRolePermissions[permission.name] || false;
 
@@ -479,14 +508,16 @@ function RolesPermissions() {
                         key={`new-role-${permission._id}`}
                         type="button"
                         onClick={() => toggleNewRolePermission(permission.name)}
-                        className={`rounded-xl border px-4 py-3 text-left transition ${
+                        className={`flex items-start rounded-lg border px-3 py-2.5 text-left transition ${
                           isOn
                             ? "border-blue-600 bg-blue-50 text-blue-900"
                             : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
                         }`}
                       >
-                        <div className="text-sm font-semibold">{permission.label}</div>
-                        <div className="mt-1 text-xs text-gray-500">{permission.section}</div>
+                        <div>
+                          <div className="text-sm font-semibold leading-5">{permission.label}</div>
+                          <div className="mt-0.5 text-xs text-gray-500">{permission.section}</div>
+                        </div>
                       </button>
                     );
                   })}

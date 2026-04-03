@@ -47,10 +47,6 @@ const courseSchema = new mongoose_1.default.Schema({
         required: true,
         trim: true,
     },
-    schedule: {
-        type: String,
-        required: true,
-    },
     department: {
         type: String,
         required: true,

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { BookOpen, Users, Clock, Calendar } from "lucide-react";
+import { BookOpen, Users, Calendar } from "lucide-react";
 import StatsStrip from "../../components/StatsStrip";
 import PaginationControls from "../../components/ui/PaginationControls";
 import { usePagination } from "../../hooks/usePagination";
@@ -14,7 +14,6 @@ type StudentCourse = {
   code: string;
   name: string;
   department: string;
-  schedule: string;
   credits: number;
   status: string;
   instructorName: string;
@@ -87,7 +86,6 @@ function MyCourses() {
             course.code,
             course.name,
             course.department,
-            course.schedule,
             course.credits,
             course.status,
             course.instructorName,
@@ -184,10 +182,6 @@ function MyCourses() {
                       {course.instructorName}
                     </div>
                     <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <Clock size={12} className="text-gray-400" />
-                      {course.schedule}
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
                       <BookOpen size={12} className="text-gray-400" />
                       {course.department}
                     </div>
@@ -260,15 +254,6 @@ function MyCourses() {
                 </p>
                 <p className="mt-2 text-sm font-semibold text-gray-900">
                   {selectedCourse.credits}
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  Schedule
-                </p>
-                <p className="mt-2 text-sm font-semibold text-gray-900">
-                  {selectedCourse.schedule}
                 </p>
               </div>
 

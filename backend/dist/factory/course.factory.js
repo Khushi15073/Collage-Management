@@ -24,16 +24,6 @@ class CourseFactory {
         }
         return course_schema_1.CourseModel.find(query).select("code");
     }
-    async findFacultyScheduleConflict(instructorId, schedule, excludeCourseId) {
-        const query = {
-            instructor: instructorId,
-            schedule,
-        };
-        if (excludeCourseId) {
-            query._id = { $ne: excludeCourseId };
-        }
-        return course_schema_1.CourseModel.findOne(query).populate("instructor", "name email");
-    }
     // ── Find course by ID ──
     async findCourseById(id) {
         return course_schema_1.CourseModel
@@ -112,7 +102,6 @@ class CourseFactory {
                         sourceSectionKey: course.sourceSectionKey,
                     },
                     $setOnInsert: {
-                        schedule: "",
                         credits: 0,
                         total: 50,
                         enrolled: 0,

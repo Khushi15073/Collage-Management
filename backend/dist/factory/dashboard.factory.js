@@ -65,7 +65,7 @@ class DashboardFactory {
     async getFacultyDashboardSummary(userId) {
         const facultyCourses = await course_schema_1.CourseModel.find({ instructor: userId })
             .sort({ createdAt: -1 })
-            .select("code name department schedule status enrolled total")
+            .select("code name department status enrolled total")
             .populate("instructor", "name email");
         const totals = facultyCourses.reduce((accumulator, course) => {
             accumulator.totalStudents += course.enrolled;
@@ -137,7 +137,7 @@ class DashboardFactory {
         const [studentCourses, attendanceRecords] = await Promise.all([
             course_schema_1.CourseModel.find({ students: userId })
                 .sort({ name: 1 })
-                .select("code name schedule credits status department")
+                .select("code name credits status department")
                 .populate("instructor", "name email"),
             attendance_schema_1.AttendanceModel.find({ student: userId })
                 .sort({ date: -1, createdAt: -1 })
@@ -183,7 +183,6 @@ class DashboardFactory {
                     code: course.code,
                     name: course.name,
                     department: course.department,
-                    schedule: course.schedule,
                     credits: course.credits,
                     status: course.status,
                     instructorName: ((_a = course.instructor) === null || _a === void 0 ? void 0 : _a.name) || "Unassigned",

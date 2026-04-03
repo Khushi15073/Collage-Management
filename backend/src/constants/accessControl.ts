@@ -170,6 +170,11 @@ export const DEFAULT_PERMISSION_GROUPS = [
     section: "Permissions",
     permissions: [
       {
+        key: "view_permissions",
+        label: "View Permissions",
+        description: "View permissions and role access",
+      },
+      {
         key: "create_permissions",
         label: "Create Permissions",
         description: "Create custom permissions",

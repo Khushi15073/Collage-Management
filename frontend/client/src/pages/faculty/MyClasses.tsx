@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { BookOpen, Users, Clock, Building2 } from "lucide-react";
+import { BookOpen, Users, Building2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import PaginationControls from "../../components/ui/PaginationControls";
 import { usePagination } from "../../hooks/usePagination";
@@ -14,7 +14,6 @@ type FacultyCourse = {
   code: string;
   name: string;
   department: string;
-  schedule: string;
   status: "Active" | "Inactive" | "Full";
   enrolled: number;
   total: number;
@@ -69,7 +68,7 @@ function MyClasses() {
   const filteredClasses = useMemo(() => {
     return classes.filter((cls) =>
       matchesSearchQuery(
-        [cls.code, cls.name, cls.department, cls.schedule, cls.status, cls.enrolled, cls.total, `${cls.enrolled}/${cls.total}`],
+        [cls.code, cls.name, cls.department, cls.status, cls.enrolled, cls.total, `${cls.enrolled}/${cls.total}`],
         normalizedQuery
       )
     );
@@ -93,7 +92,7 @@ function MyClasses() {
     <div className="flex h-full flex-col overflow-hidden bg-gray-50 p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">My Classes</h1>
-        <p className="text-gray-400 mt-1">Manage your teaching schedule and course details</p>
+        <p className="text-gray-400 mt-1">Manage your teaching classes and course details</p>
       </div>
 
       {error && (
@@ -146,10 +145,6 @@ function MyClasses() {
                 <div className="flex items-center gap-2 text-xs text-gray-500">
                   <Users size={13} className="text-gray-400" />
                   {cls.enrolled} students enrolled
-                </div>
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <Clock size={13} className="text-gray-400" />
-                  {cls.schedule}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-500">
                   <Building2 size={13} className="text-gray-400" />

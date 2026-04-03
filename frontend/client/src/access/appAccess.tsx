@@ -48,6 +48,8 @@ export const ADMIN_PANEL_PERMISSIONS = [
   "create_degrees",
   "update_degrees",
   "delete_degrees",
+  "view_attendance",
+  "view_permissions",
   "create_permissions",
   "update_permissions",
   "delete_permissions",
@@ -101,7 +103,7 @@ export const APP_NAV_ITEMS: AppNavItem[] = [
     path: "/roles",
     layout: "admin",
     icon: Settings,
-    allowedRoles: ["admin"],
+    requiredPermissions: ["view_permissions"],
   },
   {
     label: "Help & Guide",

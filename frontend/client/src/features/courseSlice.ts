@@ -15,7 +15,6 @@ export type Course = {
   _id: string;
   code: string;
   name: string;
-  schedule: string;
   department: string;
   instructor: CourseInstructor | null;
   credits: number;
@@ -28,7 +27,6 @@ export type Course = {
 type SaveCoursePayload = {
   code: string;
   name: string;
-  schedule: string;
   department: string;
   instructor: string;
   students: string[];
@@ -63,7 +61,6 @@ function normalizeCourse(course: any): Course {
     _id: course._id,
     code: course.code ?? "",
     name: course.name ?? "",
-    schedule: course.schedule ?? "",
     department: course.department ?? "",
     instructor: instructorValue,
     credits: Number(course.credits ?? 0),

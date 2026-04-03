@@ -3,7 +3,6 @@ import mongoose, { Schema, Types } from "mongoose";
 export interface ICourse {
   code:       string;
   name:       string;
-  schedule:   string;
   department: string;
   instructor: Types.ObjectId;  // ref to User (faculty)
   students:   Types.ObjectId[];
@@ -27,10 +26,6 @@ const courseSchema = new mongoose.Schema<ICourse>(
       type:     String,
       required: true,
       trim:     true,
-    },
-    schedule: {
-      type:     String,
-      required: true,
     },
     department: {
       type:     String,

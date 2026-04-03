@@ -33,7 +33,6 @@ import { hasPermission } from "../../access/appAccess";
 const emptyForm = {
   code: "",
   name: "",
-  schedule: "",
   department: "",
   instructor: "",
   students: [] as string[],
@@ -41,18 +40,7 @@ const emptyForm = {
   status: "Active" as "Active" | "Inactive" | "Full",
 };
 
-type FormErrors = Partial<Record<"code" | "name" | "schedule" | "department" | "instructor" | "total", string>>;
-
-const scheduleOptions = [
-  "Mon, Wed, Fri 09:00 - 10:00 AM",
-  "Mon, Wed, Fri 10:00 - 11:00 AM",
-  "Mon, Wed, Fri 11:00 - 12:00 PM",
-  "Mon, Wed 02:00 - 03:30 PM",
-  "Tue, Thu 09:00 - 10:30 AM",
-  "Tue, Thu 10:30 - 12:00 PM",
-  "Tue, Thu 02:00 - 03:30 PM",
-  "Sat 10:00 - 01:00 PM",
-];
+type FormErrors = Partial<Record<"code" | "name" | "department" | "instructor" | "total", string>>;
 
 function ManageCourses() {
   const dispatch = useDispatch();
@@ -98,7 +86,6 @@ function ManageCourses() {
         course.name,
         course.department,
         course.instructor?.name || "",
-        course.schedule,
         course.status,
         `${course.enrolled}/${course.total}`,
         String(course.enrolled),
@@ -146,7 +133,6 @@ function ManageCourses() {
     setForm({
       code: course.code,
       name: course.name,
-      schedule: course.schedule,
       department: course.department,
       instructor: course.instructor?._id || "",
       students: course.students.map((student) => student._id),
@@ -170,7 +156,6 @@ function ManageCourses() {
     if (!form.code.trim()) nextErrors.code = "Course code is required.";
     if (!form.name.trim()) nextErrors.name = "Course name is required.";
     if (!form.department.trim()) nextErrors.department = "Department is required.";
-    if (!form.schedule) nextErrors.schedule = "Schedule is required.";
     if (!form.instructor) nextErrors.instructor = "Instructor is required.";
     if (form.total <= 0) nextErrors.total = "Total seats must be greater than 0.";
 
@@ -310,10 +295,6 @@ function ManageCourses() {
       student.email.toLowerCase().includes(query)
     );
   });
-  const scheduleChoices = form.schedule && !scheduleOptions.includes(form.schedule)
-    ? [form.schedule, ...scheduleOptions]
-    : scheduleOptions;
-
   return (
     <div className="flex h-full flex-col overflow-hidden bg-gray-50 p-8">
       <div className="flex items-center justify-between mb-6">
@@ -379,7 +360,6 @@ function ManageCourses() {
                     <TableCell className="font-bold text-gray-800">{course.code}</TableCell>
                     <TableCell>
                       <p className="font-semibold text-gray-800">{course.name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{course.schedule}</p>
                     </TableCell>
                     <TableCell className="text-gray-600">{course.department}</TableCell>
                     <TableCell className="text-gray-600">{course.instructor?.name || "Unassigned"}</TableCell>
@@ -484,26 +464,6 @@ function ManageCourses() {
                   }`}
                 />
                 {formErrors.name && <p className="mt-1 text-xs text-red-600">{formErrors.name}</p>}
-              </div>
-
-              <div className="col-span-2">
-                <label className="block text-xs font-semibold text-gray-500 mb-1">Schedule</label>
-                <select
-                  name="schedule"
-                  value={form.schedule}
-                  onChange={handleFormChange}
-                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    formErrors.schedule ? "border-red-300" : "border-gray-200"
-                  }`}
-                >
-                  <option value="">Select schedule</option>
-                  {scheduleChoices.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-                {formErrors.schedule && <p className="mt-1 text-xs text-red-600">{formErrors.schedule}</p>}
               </div>
 
               <div>
