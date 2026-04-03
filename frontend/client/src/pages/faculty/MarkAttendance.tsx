@@ -254,11 +254,27 @@ function MarkAttendance() {
       )}
 
       <StatsStrip
-        outerClassName="-mx-8 mb-6 px-8"
+        outerClassName="mb-6 overflow-visible px-0 pb-0"
+        innerClassName="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-3"
         items={[
-          { title: "Present", value: String(present), loading: loadingSheet || loadingCourses },
-          { title: "Absent", value: String(absent), loading: loadingSheet || loadingCourses },
-          { title: "Attendance %", value: `${percentage}%`, loading: loadingSheet || loadingCourses },
+          {
+            title: "Present",
+            value: String(present),
+            loading: loadingSheet || loadingCourses,
+            className: "w-full min-w-0 min-h-[76px] py-3",
+          },
+          {
+            title: "Absent",
+            value: String(absent),
+            loading: loadingSheet || loadingCourses,
+            className: "w-full min-w-0 min-h-[76px] py-3",
+          },
+          {
+            title: "Attendance %",
+            value: `${percentage}%`,
+            loading: loadingSheet || loadingCourses,
+            className: "w-full min-w-0 min-h-[76px] py-3",
+          },
         ]}
       />
 

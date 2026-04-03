@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { Eye, EyeOff, Shield } from "lucide-react";
-import { loginUser } from "../features/authSlice";
+import { clearAuthError, loginUser } from "../features/authSlice";
 
 function AdminLogin() {
   const navigate = useNavigate();
@@ -15,6 +15,22 @@ function AdminLogin() {
 
   const loading = useSelector((state: any) => state.auth.loading);
   const error = useSelector((state: any) => state.auth.error);
+
+  function applyServerError(message: string) {
+    const normalizedMessage = message.toLowerCase();
+
+    if (normalizedMessage.includes("email")) {
+      setFieldErrors({ email: message });
+      return;
+    }
+
+    if (normalizedMessage.includes("password")) {
+      setFieldErrors({ password: message });
+      return;
+    }
+
+    setFieldErrors({});
+  }
 
   async function handleLogin() {
     const nextErrors: { email?: string; password?: string } = {};
@@ -34,6 +50,11 @@ function AdminLogin() {
       }
 
       navigate("/");
+      return;
+    }
+
+    if (loginUser.rejected.match(result)) {
+      applyServerError(String(result.payload || "Login failed"));
     }
   }
 
@@ -44,14 +65,12 @@ function AdminLogin() {
           <div className="w-16 h-16 bg-gray-900 rounded-2xl flex items-center justify-center mb-4 shadow-md">
             <Shield className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 text-center">Admin Portal</h1>
+         
           <p className="text-sm text-gray-400 mt-1">College Management System</p>
-          <span className="mt-3 px-4 py-1 rounded-full text-white text-xs font-bold bg-red-500">
-            Administrator Access
-          </span>
+      
         </div>
 
-        {error && (
+        {error && !fieldErrors.email && !fieldErrors.password && (
           <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3 mb-4">
             {error}
           </div>
@@ -65,6 +84,7 @@ function AdminLogin() {
             onChange={(e) => {
               setEmail(e.target.value);
               setFieldErrors((current) => ({ ...current, email: undefined }));
+              if (error) dispatch(clearAuthError());
             }}
             placeholder="admin@college.edu"
             className={`w-full rounded-lg border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-gray-50 ${
@@ -77,7 +97,7 @@ function AdminLogin() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-1">
             <label className="text-sm font-semibold text-gray-700">Password</label>
-            <button className="text-xs text-gray-600 hover:underline font-medium">Forgot password?</button>
+            <button type="button" className="text-xs text-gray-600 hover:underline font-medium">Forgot password?</button>
           </div>
           <div className="relative">
             <input
@@ -86,6 +106,7 @@ function AdminLogin() {
               onChange={(e) => {
                 setPassword(e.target.value);
                 setFieldErrors((current) => ({ ...current, password: undefined }));
+                if (error) dispatch(clearAuthError());
               }}
               placeholder="Enter your password"
               className={`w-full rounded-lg border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-gray-50 pr-10 ${
@@ -93,6 +114,7 @@ function AdminLogin() {
               }`}
             />
             <button
+              type="button"
               onClick={() => setShowPass(!showPass)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
@@ -109,7 +131,7 @@ function AdminLogin() {
             loading || !email || !password ? "opacity-60 cursor-not-allowed" : ""
           }`}
         >
-          {loading ? "Signing in..." : "Sign In as Admin"}
+          {loading ? "Signing in..." : "SignIn"}
         </button>
 
         <div className="mt-5 pt-4 border-t border-gray-100">

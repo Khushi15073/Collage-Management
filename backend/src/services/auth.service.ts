@@ -12,13 +12,13 @@ export class authService {
     const user = await this.authFactory.findUserByEmail(email);
 
     if (!user) {
-      throw AppError.unauthorized("Invalid email or password");
+      throw AppError.unauthorized("Email address is not registered");
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      throw AppError.unauthorized("Invalid email or password");
+      throw AppError.unauthorized("Incorrect password");
     }
 
     const tokens = this.authFactory.generateTokens(user._id.toString());

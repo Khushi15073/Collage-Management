@@ -318,11 +318,27 @@ function ManageCourses() {
       )}
 
       <StatsStrip
-        outerClassName="-mx-8 mb-5 px-8"
+        outerClassName="mb-5 overflow-visible px-0 pb-0"
+        innerClassName="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-3"
         items={[
-          { title: "Total Courses", value: String(totalCourses), loading },
-          { title: "Total Enrollments", value: String(totalEnrollments), loading },
-          { title: "Available Seats", value: String(availableSeats), loading },
+          {
+            title: "Total Courses",
+            value: String(totalCourses),
+            loading,
+            className: "w-full min-w-0 min-h-[76px] py-3",
+          },
+          {
+            title: "Total Enrollments",
+            value: String(totalEnrollments),
+            loading,
+            className: "w-full min-w-0 min-h-[76px] py-3",
+          },
+          {
+            title: "Available Seats",
+            value: String(availableSeats),
+            loading,
+            className: "w-full min-w-0 min-h-[76px] py-3",
+          },
         ]}
       />
 

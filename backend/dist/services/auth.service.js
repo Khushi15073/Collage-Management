@@ -16,11 +16,11 @@ class authService {
     async login(email, password) {
         const user = await this.authFactory.findUserByEmail(email);
         if (!user) {
-            throw errorClass_1.AppError.unauthorized("Invalid email or password");
+            throw errorClass_1.AppError.unauthorized("Email address is not registered");
         }
         const isPasswordValid = await bcrypt_1.default.compare(password, user.password);
         if (!isPasswordValid) {
-            throw errorClass_1.AppError.unauthorized("Invalid email or password");
+            throw errorClass_1.AppError.unauthorized("Incorrect password");
         }
         const tokens = this.authFactory.generateTokens(user._id.toString());
         await this.authFactory.saveRefreshToken(user._id.toString(), tokens.refreshToken);
