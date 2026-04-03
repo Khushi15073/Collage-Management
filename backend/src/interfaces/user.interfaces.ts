@@ -8,6 +8,7 @@ export interface IUser {
     gender: "male" | "female" | "other";
     password: string;
     role: mongoose.Types.ObjectId | IRole;
+    degree?: mongoose.Types.ObjectId | null;
    
 }
 
@@ -18,8 +19,8 @@ export interface CreateUserDTO {
     phoneNumber: string;
     gender: "male" | "female" | "other";
     password: string;
-   
-    role?: any; 
+    role?: any;
+    degree?: string;
 }
 
 //  Update User
@@ -30,6 +31,7 @@ export interface UpdateUserDTO {
     gender?: "male" | "female" | "other";
     password?: string;
     role?: string;
+    degree?: string | null;
 }
 
 //  Login

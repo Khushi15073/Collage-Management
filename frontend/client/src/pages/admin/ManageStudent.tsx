@@ -6,11 +6,12 @@ import {
   updateStudent,
   deleteStudent,
   clearStudentError,
-  setStudentLimit,
   setStudentPage,
 } from "../../features/studentSlice";
 import type { Student } from "../../features/studentSlice";
 import { fetchRoles } from "../../features/roleSlice";
+import { fetchDegrees } from "../../features/degreeSlice";
+import type { DegreeRecord } from "../../features/degreeSlice";
 import {
   Table,
   TableBody,
@@ -31,7 +32,10 @@ const emptyForm = {
   phoneNumber: "",
   gender: "male" as "male" | "female" | "other",
   role: "",
+  degree: "",
 };
+
+type FormErrors = Partial<Record<keyof typeof emptyForm, string>>;
 
 function ManageStudents() {
   const dispatch = useDispatch();
@@ -48,11 +52,15 @@ function ManageStudents() {
   const roles = useSelector((state: any) => state.roles.roles);
   const rolesLoading = useSelector((state: any) => state.roles.loading);
   const roleError = useSelector((state: any) => state.roles.error);
+  const degrees = useSelector((state: any) => state.degrees.degrees) as DegreeRecord[];
+  const degreesLoading = useSelector((state: any) => state.degrees.loading) as boolean;
+  const degreeError = useSelector((state: any) => state.degrees.error) as string | null;
   const user = useSelector((state: any) => state.auth.user);
 
   const [showModal, setShowModal] = useState<boolean>(false);
   const [editStudent, setEditStudent] = useState<Student | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [emailNotice, setEmailNotice] = useState<{ sent: boolean; message: string } | null>(null);
   const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
   const previousSearchRef = useRef(searchQuery);
@@ -60,6 +68,9 @@ function ManageStudents() {
   useEffect(() => {
     if (roles.length === 0) {
       dispatch(fetchRoles() as any);
+    }
+    if (degrees.length === 0) {
+      dispatch(fetchDegrees() as any);
     }
   }, []);
 
@@ -93,6 +104,7 @@ function ManageStudents() {
   function openAddModal() {
     setEditStudent(null);
     setForm(emptyForm);
+    setFormErrors({});
     setEmailNotice(null);
     dispatch(clearStudentError());
     setShowModal(true);
@@ -102,6 +114,7 @@ function ManageStudents() {
     setShowModal(false);
     setEditStudent(null);
     setForm(emptyForm);
+    setFormErrors({});
   }
 
   function openEditModal(student: Student) {
@@ -113,14 +126,26 @@ function ManageStudents() {
       phoneNumber: student.phoneNumber,
       gender: student.gender,
       role: student.role?._id || "",
+      degree: student.degree?.id || "",
     });
+    setFormErrors({});
     dispatch(clearStudentError());
     setShowModal(true);
   }
 
   async function handleSave() {
-    if (!form.name || !form.email || !form.phoneNumber || !form.role) return;
-    if (!editStudent && !form.password) return;
+    const nextErrors: FormErrors = {};
+
+    if (!form.name.trim()) nextErrors.name = "Name is required.";
+    if (!form.email.trim()) nextErrors.email = "Email is required.";
+    if (!form.phoneNumber.trim()) nextErrors.phoneNumber = "Phone number is required.";
+    if (!form.role) nextErrors.role = "Role is required.";
+    if (!form.degree) nextErrors.degree = "Degree is required.";
+    if (!editStudent && !form.password.trim()) nextErrors.password = "Password is required.";
+
+    setFormErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) return;
 
     if (editStudent) {
       const result = await dispatch(
@@ -131,6 +156,7 @@ function ManageStudents() {
           phoneNumber: form.phoneNumber,
           gender: form.gender,
           role: form.role,
+          degree: form.degree,
           ...(form.password ? { password: form.password } : {}),
         }) as any
       );
@@ -154,6 +180,7 @@ function ManageStudents() {
           phoneNumber: form.phoneNumber,
           gender: form.gender,
           role: form.role,
+          degree: form.degree,
         }) as any
       );
 
@@ -191,11 +218,18 @@ function ManageStudents() {
   function handleFormChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+    setFormErrors((current) => {
+      if (!current[name as keyof typeof emptyForm]) return current;
+      const next = { ...current };
+      delete next[name as keyof typeof emptyForm];
+      return next;
+    });
     if (error) dispatch(clearStudentError());
   }
 
-  const pageError = error || roleError;
+  const pageError = error || roleError || degreeError;
   const isSessionError =
     pageError === "Session expired. Please log in again." ||
     pageError === "Unauthorized" ||
@@ -243,25 +277,7 @@ function ManageStudents() {
         <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-base font-semibold text-gray-800">Student List</h2>
-            <p className="mt-1 text-sm text-gray-400">
-              Page {totalPages === 0 ? 0 : currentPage} of {totalPages}
-            </p>
           </div>
-
-          <label className="flex items-center gap-2 text-sm text-gray-500">
-            <span>Rows</span>
-            <select
-              value={limit}
-              onChange={(event) => dispatch(setStudentLimit(Number(event.target.value)))}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {[10, 20, 50, 100].map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
 
         <TableContainer className="min-h-0 flex-1 overflow-auto">
@@ -276,6 +292,7 @@ function ManageStudents() {
                   <TableHeader>Phone</TableHeader>
                   <TableHeader>Gender</TableHeader>
                   <TableHeader>Role</TableHeader>
+                  <TableHeader>Degree</TableHeader>
                   <TableHeader>Actions</TableHeader>
                 </TableRow>
               </TableHead>
@@ -290,6 +307,9 @@ function ManageStudents() {
                       <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 capitalize">
                         {student.role?.name || "-"}
                       </span>
+                    </TableCell>
+                    <TableCell className="text-gray-500 text-xs">
+                      {student.degree?.degreeName || "-"}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -313,7 +333,7 @@ function ManageStudents() {
                 ))}
                 {students.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-12 text-center text-sm text-gray-400">
+                    <TableCell colSpan={7} className="py-12 text-center text-sm text-gray-400">
                       {pageError ? "Unable to load students." : "No students found."}
                     </TableCell>
                   </TableRow>
@@ -373,9 +393,12 @@ function ManageStudents() {
                   name="name"
                   value={form.name}
                   onChange={handleFormChange}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full rounded-lg border bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.name ? "border-red-300" : "border-gray-200"
+                  }`}
                   placeholder="Enter student name"
                 />
+                {formErrors.name && <p className="mt-1 text-xs text-red-600">{formErrors.name}</p>}
               </div>
 
               <div className="sm:col-span-2">
@@ -385,9 +408,12 @@ function ManageStudents() {
                   type="email"
                   value={form.email}
                   onChange={handleFormChange}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full rounded-lg border bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.email ? "border-red-300" : "border-gray-200"
+                  }`}
                   placeholder="Enter email"
                 />
+                {formErrors.email && <p className="mt-1 text-xs text-red-600">{formErrors.email}</p>}
               </div>
 
               <div>
@@ -399,9 +425,12 @@ function ManageStudents() {
                   type="password"
                   value={form.password}
                   onChange={handleFormChange}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full rounded-lg border bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.password ? "border-red-300" : "border-gray-200"
+                  }`}
                   placeholder={editStudent ? "Leave blank to keep current" : "Enter password"}
                 />
+                {formErrors.password && <p className="mt-1 text-xs text-red-600">{formErrors.password}</p>}
               </div>
 
               <div>
@@ -410,9 +439,12 @@ function ManageStudents() {
                   name="phoneNumber"
                   value={form.phoneNumber}
                   onChange={handleFormChange}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full rounded-lg border bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.phoneNumber ? "border-red-300" : "border-gray-200"
+                  }`}
                   placeholder="Enter phone number"
                 />
+                {formErrors.phoneNumber && <p className="mt-1 text-xs text-red-600">{formErrors.phoneNumber}</p>}
               </div>
 
               <div>
@@ -436,7 +468,9 @@ function ManageStudents() {
                   value={form.role}
                   onChange={handleFormChange}
                   disabled={rolesLoading}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  className={`w-full rounded-lg border bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 ${
+                    formErrors.role ? "border-red-300" : "border-gray-200"
+                  }`}
                 >
                   <option value="">{rolesLoading ? "Loading roles..." : "Select role"}</option>
                   {roles.map((role: any) => (
@@ -445,6 +479,28 @@ function ManageStudents() {
                     </option>
                   ))}
                 </select>
+                {formErrors.role && <p className="mt-1 text-xs text-red-600">{formErrors.role}</p>}
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-sm font-medium text-gray-700">Degree</label>
+                <select
+                  name="degree"
+                  value={form.degree}
+                  onChange={handleFormChange}
+                  disabled={degreesLoading}
+                  className={`w-full rounded-lg border bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 ${
+                    formErrors.degree ? "border-red-300" : "border-gray-200"
+                  }`}
+                >
+                  <option value="">{degreesLoading ? "Loading degrees..." : "Select degree"}</option>
+                  {degrees.map((degree) => (
+                    <option key={degree.id} value={degree.id}>
+                      {degree.degreeName} ({degree.department})
+                    </option>
+                  ))}
+                </select>
+                {formErrors.degree && <p className="mt-1 text-xs text-red-600">{formErrors.degree}</p>}
               </div>
             </div>
 

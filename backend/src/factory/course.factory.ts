@@ -5,6 +5,12 @@ import type { IDegreeSection } from "../interfaces/degree.interface";
 import { DegreeModel } from "../schemas/degree.schema";
 
 export class CourseFactory {
+  private applyEnrollment(course: any, studentIds: string[]) {
+    const uniqueStudents = Array.from(new Set(studentIds));
+    course.students = uniqueStudents.map((studentId) => new Types.ObjectId(studentId));
+    course.enrolled = uniqueStudents.length;
+    course.status = uniqueStudents.length >= course.total ? "Full" : "Active";
+  }
 
   // ── Find course by code (for duplicate check) ──
   async findCourseByCode(code: string) {
@@ -59,6 +65,46 @@ export class CourseFactory {
   // ── Create a new course ──
   async createCourse(data: CreateCourseDTO) {
     return CourseModel.create(data);
+  }
+
+  async assignStudentToDegreeCourses(degreeId: string, studentId: string) {
+    const courses = await CourseModel.find({ sourceDegree: new Types.ObjectId(degreeId) });
+
+    for (const course of courses) {
+      const currentStudentIds = (course.students || []).map((item) => String(item));
+      if (currentStudentIds.includes(studentId)) {
+        continue;
+      }
+
+      this.applyEnrollment(course, [...currentStudentIds, studentId]);
+      await course.save();
+    }
+  }
+
+  async removeStudentFromDegreeCourses(degreeId: string, studentId: string) {
+    const courses = await CourseModel.find({ sourceDegree: new Types.ObjectId(degreeId) });
+
+    for (const course of courses) {
+      const nextStudentIds = (course.students || [])
+        .map((item) => String(item))
+        .filter((id) => id !== studentId);
+
+      this.applyEnrollment(course, nextStudentIds);
+      await course.save();
+    }
+  }
+
+  async removeStudentFromAllCourses(studentId: string) {
+    const courses = await CourseModel.find({ students: new Types.ObjectId(studentId) });
+
+    for (const course of courses) {
+      const nextStudentIds = (course.students || [])
+        .map((item) => String(item))
+        .filter((id) => id !== studentId);
+
+      this.applyEnrollment(course, nextStudentIds);
+      await course.save();
+    }
   }
 
   async replaceCoursesForDegree(

@@ -38,6 +38,11 @@ const userSchema = new mongoose.Schema<IUser>(
       type: Schema.Types.ObjectId,
       ref: 'Role',
       required: true
+    },
+    degree: {
+      type: Schema.Types.ObjectId,
+      ref: "Degree",
+      default: null,
     }
   },
   {

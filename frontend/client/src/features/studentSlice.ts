@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
 import type { RootState } from "../app/store";
+import type { DegreeRecord } from "./degreeSlice";
 
 const BASE_URL = "http://localhost:8000";
 
@@ -17,6 +18,7 @@ export type Student = {
   phoneNumber: string;
   gender: "male" | "female" | "other";
   role?: StudentRole;
+  degree?: Pick<DegreeRecord, "id" | "degreeName" | "department" | "type" | "count">;
 };
 
 interface StudentState {
@@ -57,6 +59,16 @@ function normalizeStudent(student: any): Student {
     role:
       student.role && typeof student.role === "object"
         ? { _id: student.role._id, name: student.role.name }
+        : undefined,
+    degree:
+      student.degree && typeof student.degree === "object"
+        ? {
+            id: student.degree._id,
+            degreeName: student.degree.degreeName,
+            department: student.degree.department,
+            type: student.degree.type,
+            count: Number(student.degree.count ?? 0),
+          }
         : undefined,
   };
 }
@@ -129,6 +141,7 @@ export const createStudent = createAsyncThunk(
       phoneNumber: string;
       gender: string;
       role: string;
+      degree: string;
     },
     { rejectWithValue }
     ) => {
@@ -159,6 +172,7 @@ export const updateStudent = createAsyncThunk(
       phoneNumber: string;
       gender: string;
       role: string;
+      degree: string;
       password?: string;
     },
     { rejectWithValue }

@@ -7,10 +7,14 @@ import { ResponseCodes } from "../enums/responseCodes";
 import { CreateUserDTO, UpdateUserDTO } from "../interfaces/user.interfaces";
 import { EmailService } from "./email.service";
 import type { PaginationMeta } from "../interfaces/common.interface";
+import { DegreeFactory } from "../factory/degree.factory";
+import { CourseFactory } from "../factory/course.factory";
 
 export class UserService {
   private userFactory = new UserFactory();
   private emailService = new EmailService();
+  private degreeFactory = new DegreeFactory();
+  private courseFactory = new CourseFactory();
 
   public async createUser(userData: CreateUserDTO) {
     try {
@@ -28,11 +32,36 @@ export class UserService {
         userData.role = defaultRole._id;
       }
 
+      if (userData.degree === "") {
+        userData.degree = undefined;
+      }
+
       const plainPassword = userData.password;
       const roleName = await this.userFactory.getRoleNameById(String(userData.role));
+
+      if (roleName === "student") {
+        if (!userData.degree) {
+          throw AppError.badRequest("Degree is required for students");
+        }
+
+        const degree = await this.degreeFactory.findDegreeById(String(userData.degree));
+        if (!degree) {
+          throw AppError.notFound("Degree not found");
+        }
+      } else {
+        userData.degree = undefined;
+      }
+
       const hashedPassword = await bcrypt.hash(userData.password, 10);
       userData.password = hashedPassword;
       const user = await this.userFactory.createUser(userData);
+
+      if (roleName === "student" && user.degree) {
+        await this.courseFactory.assignStudentToDegreeCourses(
+          String(user.degree._id || user.degree),
+          String(user._id)
+        );
+      }
 
       let emailSent = false;
       let emailError: string | null = null;
@@ -121,11 +150,11 @@ export class UserService {
 
   public async updateUser(userId: string, updateData: UpdateUserDTO) {
     try {
-      await this.userFactory.findUserById(userId);
+      const existingUser = await this.userFactory.findUserById(userId);
 
       if (updateData.email != null && updateData.email !== "") {
-        const existingUser = await this.userFactory.findUserByEmail(updateData.email);
-        if (existingUser && existingUser._id.toString() !== userId) {
+        const userWithEmail = await this.userFactory.findUserByEmail(updateData.email);
+        if (userWithEmail && userWithEmail._id.toString() !== userId) {
           throw AppError.conflict("User with this email already exists");
         }
       }
@@ -134,7 +163,41 @@ export class UserService {
         updateData.password = await bcrypt.hash(updateData.password, 10);
       }
 
+      if (updateData.degree === "") {
+        updateData.degree = null;
+      }
+
+      const nextRoleId = updateData.role ?? String(existingUser.role?._id || existingUser.role);
+      const nextRoleName = await this.userFactory.getRoleNameById(String(nextRoleId));
+      const previousDegreeId = existingUser.degree ? String((existingUser.degree as any)._id || existingUser.degree) : null;
+      const nextDegreeId =
+        updateData.degree !== undefined
+          ? (updateData.degree ? String(updateData.degree) : null)
+          : previousDegreeId;
+
+      if (nextRoleName === "student") {
+        if (!nextDegreeId) {
+          throw AppError.badRequest("Degree is required for students");
+        }
+
+        const degree = await this.degreeFactory.findDegreeById(nextDegreeId);
+        if (!degree) {
+          throw AppError.notFound("Degree not found");
+        }
+      } else {
+        updateData.degree = null;
+      }
+
       const updatedUser = await this.userFactory.updateUser(userId, updateData);
+
+      if (previousDegreeId && previousDegreeId !== nextDegreeId) {
+        await this.courseFactory.removeStudentFromDegreeCourses(previousDegreeId, userId);
+      }
+
+      if (nextRoleName === "student" && nextDegreeId) {
+        await this.courseFactory.assignStudentToDegreeCourses(nextDegreeId, userId);
+      }
+
       return ResponseHandler.sendResponse(
         ResponseCodes.OK,
         "User updated successfully",
@@ -152,6 +215,7 @@ export class UserService {
       if (user == null) {
         throw AppError.notFound("User Not Found");
       }
+      await this.courseFactory.removeStudentFromAllCourses(userId);
       const result = await this.userFactory.deleteUser(userId);
 
       return ResponseHandler.sendResponse(

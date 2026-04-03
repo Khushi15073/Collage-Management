@@ -42,6 +42,7 @@ function RolesPermissions() {
   const [newRoleName, setNewRoleName] = useState("");
   const [newRoleDescription, setNewRoleDescription] = useState("");
   const [newRolePermissions, setNewRolePermissions] = useState<Record<string, boolean>>({});
+  const [showCreateRolePanel, setShowCreateRolePanel] = useState(false);
 
   useEffect(() => {
     dispatch(fetchRoles() as any);
@@ -221,10 +222,22 @@ function RolesPermissions() {
       setNewRoleName("");
       setNewRoleDescription("");
       setNewRolePermissions({});
+      setNewPermissionName("");
+      setNewPermissionDescription("");
       setActiveRoleId(createdRole._id);
+      setShowCreateRolePanel(false);
       setRoleSaved(true);
       setTimeout(() => setRoleSaved(false), 2500);
     }
+  }
+
+  function closeCreateRolePanel() {
+    setShowCreateRolePanel(false);
+    setNewRoleName("");
+    setNewRoleDescription("");
+    setNewRolePermissions({});
+    setNewPermissionName("");
+    setNewPermissionDescription("");
   }
 
   const pageError = rolesError || permissionsError;
@@ -240,13 +253,23 @@ function RolesPermissions() {
           <h1 className="text-3xl font-bold text-gray-900">Role & Permissions</h1>
           <p className="text-sm text-gray-400 mt-1">Manage access control for different user roles</p>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={loading || activeRole == null || !canUpdateRolePermissions}
-          className="flex items-center gap-2 bg-gray-900 hover:bg-gray-700 disabled:bg-gray-400 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition"
-        >
-          <Check size={15} /> Save Changes
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setShowCreateRolePanel(true)}
+            disabled={!canCreateRole}
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Plus size={15} /> Add New Role
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={loading || activeRole == null || !canUpdateRolePermissions}
+            className="flex items-center gap-2 bg-gray-900 hover:bg-gray-700 disabled:bg-gray-400 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition"
+          >
+            <Check size={15} /> Save Changes
+          </button>
+        </div>
       </div>
 
       {saved && (
@@ -279,112 +302,6 @@ function RolesPermissions() {
       <div className="flex flex-col rounded-2xl border border-gray-200 bg-white shadow-sm">
         <div className="px-6 py-5 border-b border-gray-100">
           <h2 className="text-base font-semibold text-gray-800">Configure Permissions</h2>
-        </div>
-
-        <div className="shrink-0 border-b border-gray-100 px-6 py-5">
-          <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 p-5">
-            <div className="mb-4">
-              <h3 className="text-base font-semibold text-gray-800">Create New Role</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Add any custom role and choose the exact permissions it should have.
-              </p>
-            </div>
-
-            <div className="grid gap-4 lg:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Role Name</label>
-                <input
-                  value={newRoleName}
-                  onChange={(event) => setNewRoleName(event.target.value)}
-                  placeholder="e.g. librarian"
-                  className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Description</label>
-                <input
-                  value={newRoleDescription}
-                  onChange={(event) => setNewRoleDescription(event.target.value)}
-                  placeholder="Describe this role"
-                  className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <div className="mb-2 flex items-center justify-between">
-                <label className="block text-sm font-medium text-gray-700">
-                  Starting Permissions
-                </label>
-                <span className="text-xs text-gray-400">
-                  {Object.values(newRolePermissions).filter(Boolean).length} selected
-                </span>
-              </div>
-              <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                {visiblePermissions.map((permission) => {
-                  const isOn = newRolePermissions[permission.name] || false;
-
-                  return (
-                    <button
-                      key={`new-role-${permission._id}`}
-                      type="button"
-                      onClick={() => toggleNewRolePermission(permission.name)}
-                      className={`rounded-xl border px-4 py-3 text-left transition ${
-                        isOn
-                          ? "border-blue-600 bg-blue-50 text-blue-900"
-                          : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
-                      }`}
-                    >
-                      <div className="text-sm font-semibold">{permission.label}</div>
-                      <div className="mt-1 text-xs text-gray-500">{permission.section}</div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="mt-4 flex justify-end">
-              <button
-                type="button"
-                onClick={handleCreateRole}
-                disabled={loading || newRoleName.trim() === "" || !canCreateRole}
-                className="flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:bg-gray-400"
-              >
-                <Plus size={15} /> Create Role
-              </button>
-            </div>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-[1.2fr_2fr_auto]">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Permission Key</label>
-              <input
-                value={newPermissionName}
-                onChange={(event) => setNewPermissionName(event.target.value)}
-                placeholder="e.g. approve_budget"
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Description</label>
-              <input
-                value={newPermissionDescription}
-                onChange={(event) => setNewPermissionDescription(event.target.value)}
-                placeholder="Describe what this permission allows"
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div className="flex items-end">
-              <button
-                type="button"
-                onClick={handleCreatePermission}
-                disabled={loading || newPermissionName.trim() === "" || !canCreatePermission}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <Plus size={15} /> Create Permission
-              </button>
-            </div>
-          </div>
         </div>
 
         <div className="px-6 pt-5">
@@ -453,6 +370,150 @@ function RolesPermissions() {
           )}
         </div>
       </div>
+
+      {showCreateRolePanel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between border-b border-gray-100 px-6 py-5">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Create Role And Permissions</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Add a new role, create any missing permissions, and choose what this role can access.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeCreateRolePanel}
+                className="rounded-lg px-3 py-1 text-sm text-gray-500 hover:bg-gray-100"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="overflow-y-auto px-6 py-5">
+              <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 p-5">
+                <div className="mb-4">
+                  <h3 className="text-base font-semibold text-gray-800">Role Details</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Add any custom role and choose the exact permissions it should have.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">Role Name</label>
+                    <input
+                      value={newRoleName}
+                      onChange={(event) => setNewRoleName(event.target.value)}
+                      placeholder="e.g. librarian"
+                      className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">Description</label>
+                    <input
+                      value={newRoleDescription}
+                      onChange={(event) => setNewRoleDescription(event.target.value)}
+                      placeholder="Describe this role"
+                      className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 p-5">
+                <div className="mb-4">
+                  <h3 className="text-base font-semibold text-gray-800">Create Permission</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Add a new permission first if the role needs access that is not listed yet.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-[1.2fr_2fr_auto]">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">Permission Key</label>
+                    <input
+                      value={newPermissionName}
+                      onChange={(event) => setNewPermissionName(event.target.value)}
+                      placeholder="e.g. approve_budget"
+                      className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">Description</label>
+                    <input
+                      value={newPermissionDescription}
+                      onChange={(event) => setNewPermissionDescription(event.target.value)}
+                      placeholder="Describe what this permission allows"
+                      className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={handleCreatePermission}
+                      disabled={loading || newPermissionName.trim() === "" || !canCreatePermission}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Plus size={15} /> Create Permission
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Starting Permissions
+                  </label>
+                  <span className="text-xs text-gray-400">
+                    {Object.values(newRolePermissions).filter(Boolean).length} selected
+                  </span>
+                </div>
+                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                  {visiblePermissions.map((permission) => {
+                    const isOn = newRolePermissions[permission.name] || false;
+
+                    return (
+                      <button
+                        key={`new-role-${permission._id}`}
+                        type="button"
+                        onClick={() => toggleNewRolePermission(permission.name)}
+                        className={`rounded-xl border px-4 py-3 text-left transition ${
+                          isOn
+                            ? "border-blue-600 bg-blue-50 text-blue-900"
+                            : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className="text-sm font-semibold">{permission.label}</div>
+                        <div className="mt-1 text-xs text-gray-500">{permission.section}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
+              <button
+                type="button"
+                onClick={closeCreateRolePanel}
+                className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateRole}
+                disabled={loading || newRoleName.trim() === "" || !canCreateRole}
+                className="flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+              >
+                <Plus size={15} /> Create Role
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

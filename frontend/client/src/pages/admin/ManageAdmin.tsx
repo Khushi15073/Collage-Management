@@ -6,7 +6,6 @@ import {
   createAdmin,
   deleteAdmin,
   fetchAdmins,
-  setAdminLimit,
   setAdminPage,
   setAdminRole,
   updateAdmin,
@@ -35,6 +34,8 @@ const emptyForm = {
   role: "",
 };
 
+type FormErrors = Partial<Record<keyof typeof emptyForm, string>>;
+
 function ManageAdmin() {
   const dispatch = useDispatch();
   const { searchQuery } = useDashboardSearch();
@@ -55,6 +56,7 @@ function ManageAdmin() {
   const [showModal, setShowModal] = useState(false);
   const [editAdmin, setEditAdmin] = useState<AdminUser | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [emailNotice, setEmailNotice] = useState<{ sent: boolean; message: string } | null>(null);
   const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
   const previousSearchRef = useRef(searchQuery);
@@ -124,6 +126,7 @@ function ManageAdmin() {
       role: selectedRole?._id || "",
     });
     setEmailNotice(null);
+    setFormErrors({});
     dispatch(clearAdminError());
     setShowModal(true);
   }
@@ -138,6 +141,7 @@ function ManageAdmin() {
       gender: admin.gender,
       role: admin.role?._id || selectedRole?._id || "",
     });
+    setFormErrors({});
     dispatch(clearAdminError());
     setShowModal(true);
   }
@@ -146,11 +150,21 @@ function ManageAdmin() {
     setShowModal(false);
     setEditAdmin(null);
     setForm(emptyForm);
+    setFormErrors({});
   }
 
   async function handleSave() {
-    if (!form.role || !form.name || !form.email || !form.phoneNumber) return;
-    if (!editAdmin && !form.password) return;
+    const nextErrors: FormErrors = {};
+
+    if (!form.name.trim()) nextErrors.name = "Name is required.";
+    if (!form.email.trim()) nextErrors.email = "Email is required.";
+    if (!form.phoneNumber.trim()) nextErrors.phoneNumber = "Phone number is required.";
+    if (!form.role) nextErrors.role = "Role is required.";
+    if (!editAdmin && !form.password.trim()) nextErrors.password = "Password is required.";
+
+    setFormErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) return;
 
     if (editAdmin) {
       const result = await dispatch(
@@ -220,6 +234,17 @@ function ManageAdmin() {
   const canUpdate = hasPermission(user, "update_admins");
   const canDelete = hasPermission(user, "delete_admins");
 
+  function handleFieldChange<K extends keyof typeof emptyForm>(field: K, value: (typeof emptyForm)[K]) {
+    setForm((current) => ({ ...current, [field]: value }));
+    setFormErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+    if (error) dispatch(clearAdminError());
+  }
+
   return (
     <div className="flex h-full flex-col overflow-hidden bg-gray-50 p-8">
       <div className="mb-6 flex items-center justify-between">
@@ -257,42 +282,22 @@ function ManageAdmin() {
             <h2 className="text-base font-semibold text-gray-800">
               {selectedRole ? `${selectedRole.name.charAt(0).toUpperCase() + selectedRole.name.slice(1)} Directory` : "Role Directory"}
             </h2>
-            <p className="mt-1 text-sm text-gray-400">
-              Page {totalPages === 0 ? 0 : currentPage} of {totalPages}
-            </p>
           </div>
 
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <label className="flex items-center gap-2 text-sm text-gray-500">
-              <span>Role</span>
-              <select
-                value={selectedRoleName}
-                onChange={(event) => dispatch(setAdminRole(event.target.value))}
-                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {manageableRoles.map((role: any) => (
-                  <option key={role._id} value={role.name}>
-                    {role.name.charAt(0).toUpperCase() + role.name.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="flex items-center gap-2 text-sm text-gray-500">
-              <span>Rows</span>
-              <select
-                value={limit}
-                onChange={(event) => dispatch(setAdminLimit(Number(event.target.value)))}
-                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {[10, 20, 50, 100].map((value) => (
-                  <option key={value} value={value}>
-                    {value}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+          <label className="flex items-center gap-2 text-sm text-gray-500">
+            <span>Role</span>
+            <select
+              value={selectedRoleName}
+              onChange={(event) => dispatch(setAdminRole(event.target.value))}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {manageableRoles.map((role: any) => (
+                <option key={role._id} value={role.name}>
+                  {role.name.charAt(0).toUpperCase() + role.name.slice(1)}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <TableContainer className="min-h-0 flex-1 overflow-auto">
@@ -412,10 +417,13 @@ function ManageAdmin() {
                 <label className="mb-1 block text-sm font-medium text-gray-700">Name</label>
                 <input
                   value={form.name}
-                  onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(event) => handleFieldChange("name", event.target.value)}
+                  className={`w-full rounded-lg border bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.name ? "border-red-300" : "border-gray-200"
+                  }`}
                   placeholder="Enter user name"
                 />
+                {formErrors.name && <p className="mt-1 text-xs text-red-600">{formErrors.name}</p>}
               </div>
 
               <div className="sm:col-span-2">
@@ -423,10 +431,13 @@ function ManageAdmin() {
                 <input
                   type="email"
                   value={form.email}
-                  onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(event) => handleFieldChange("email", event.target.value)}
+                  className={`w-full rounded-lg border bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.email ? "border-red-300" : "border-gray-200"
+                  }`}
                   placeholder="Enter user email"
                 />
+                {formErrors.email && <p className="mt-1 text-xs text-red-600">{formErrors.email}</p>}
               </div>
 
               <div>
@@ -436,29 +447,37 @@ function ManageAdmin() {
                 <input
                   type="password"
                   value={form.password}
-                  onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(event) => handleFieldChange("password", event.target.value)}
+                  className={`w-full rounded-lg border bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.password ? "border-red-300" : "border-gray-200"
+                  }`}
                   placeholder={editAdmin ? "Leave blank to keep current" : "Enter password"}
                 />
+                {formErrors.password && <p className="mt-1 text-xs text-red-600">{formErrors.password}</p>}
               </div>
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">Phone</label>
                 <input
                   value={form.phoneNumber}
-                  onChange={(event) => setForm((current) => ({ ...current, phoneNumber: event.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(event) => handleFieldChange("phoneNumber", event.target.value)}
+                  className={`w-full rounded-lg border bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.phoneNumber ? "border-red-300" : "border-gray-200"
+                  }`}
                   placeholder="Enter phone number"
                 />
+                {formErrors.phoneNumber && <p className="mt-1 text-xs text-red-600">{formErrors.phoneNumber}</p>}
               </div>
 
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-sm font-medium text-gray-700">Role</label>
                 <select
                   value={form.role}
-                  onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))}
+                  onChange={(event) => handleFieldChange("role", event.target.value)}
                   disabled={rolesLoading}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  className={`w-full rounded-lg border bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 ${
+                    formErrors.role ? "border-red-300" : "border-gray-200"
+                  }`}
                 >
                   <option value="">{rolesLoading ? "Loading roles..." : "Select role"}</option>
                   {manageableRoles.map((role: any) => (
@@ -467,6 +486,7 @@ function ManageAdmin() {
                     </option>
                   ))}
                 </select>
+                {formErrors.role && <p className="mt-1 text-xs text-red-600">{formErrors.role}</p>}
               </div>
 
               <div className="sm:col-span-2">

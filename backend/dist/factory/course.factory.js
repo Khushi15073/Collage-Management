@@ -5,6 +5,12 @@ const mongoose_1 = require("mongoose");
 const course_schema_1 = require("../schemas/course.schema");
 const degree_schema_1 = require("../schemas/degree.schema");
 class CourseFactory {
+    applyEnrollment(course, studentIds) {
+        const uniqueStudents = Array.from(new Set(studentIds));
+        course.students = uniqueStudents.map((studentId) => new mongoose_1.Types.ObjectId(studentId));
+        course.enrolled = uniqueStudents.length;
+        course.status = uniqueStudents.length >= course.total ? "Full" : "Active";
+    }
     // ── Find course by code (for duplicate check) ──
     async findCourseByCode(code) {
         return course_schema_1.CourseModel.findOne({ code });
@@ -45,6 +51,37 @@ class CourseFactory {
     // ── Create a new course ──
     async createCourse(data) {
         return course_schema_1.CourseModel.create(data);
+    }
+    async assignStudentToDegreeCourses(degreeId, studentId) {
+        const courses = await course_schema_1.CourseModel.find({ sourceDegree: new mongoose_1.Types.ObjectId(degreeId) });
+        for (const course of courses) {
+            const currentStudentIds = (course.students || []).map((item) => String(item));
+            if (currentStudentIds.includes(studentId)) {
+                continue;
+            }
+            this.applyEnrollment(course, [...currentStudentIds, studentId]);
+            await course.save();
+        }
+    }
+    async removeStudentFromDegreeCourses(degreeId, studentId) {
+        const courses = await course_schema_1.CourseModel.find({ sourceDegree: new mongoose_1.Types.ObjectId(degreeId) });
+        for (const course of courses) {
+            const nextStudentIds = (course.students || [])
+                .map((item) => String(item))
+                .filter((id) => id !== studentId);
+            this.applyEnrollment(course, nextStudentIds);
+            await course.save();
+        }
+    }
+    async removeStudentFromAllCourses(studentId) {
+        const courses = await course_schema_1.CourseModel.find({ students: new mongoose_1.Types.ObjectId(studentId) });
+        for (const course of courses) {
+            const nextStudentIds = (course.students || [])
+                .map((item) => String(item))
+                .filter((id) => id !== studentId);
+            this.applyEnrollment(course, nextStudentIds);
+            await course.save();
+        }
     }
     async replaceCoursesForDegree(degreeId, department, sections) {
         const degreeObjectId = new mongoose_1.Types.ObjectId(degreeId);

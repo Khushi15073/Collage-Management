@@ -8,7 +8,7 @@ export class UserFactory {
     try {
       const user = new UserModel(userData);
       await user.save();
-      return await user.populate("role");
+      return await user.populate(["role", "degree"]);
     } catch (error) {
       throw error;
     }
@@ -75,7 +75,8 @@ export class UserFactory {
           .sort({ createdAt: -1, _id: -1 })
           .skip(skip)
           .limit(limit)
-          .populate("role"),
+          .populate("role")
+          .populate("degree", "degreeName department type count"),
         UserModel.countDocuments(filter),
       ]);
 
@@ -96,7 +97,9 @@ export class UserFactory {
 
   public async findUserById(userId: string) {
     try {
-      const user = await UserModel.findById(userId).populate("role");
+      const user = await UserModel.findById(userId)
+        .populate("role")
+        .populate("degree", "degreeName department type count");
       if (!user) {
         throw AppError.notFound("User not found");
       }
@@ -110,7 +113,9 @@ export class UserFactory {
     try {
       const user = await UserModel.findByIdAndUpdate(userId, updateData, {
         new: true,
-      }).populate("role");
+      })
+        .populate("role")
+        .populate("degree", "degreeName department type count");
 
       if (!user) {
         throw AppError.notFound("User not found");
@@ -124,7 +129,9 @@ export class UserFactory {
 
   public async deleteUser(userId: string) {
     try {
-      const user = await UserModel.findByIdAndDelete(userId).populate("role");
+      const user = await UserModel.findByIdAndDelete(userId)
+        .populate("role")
+        .populate("degree", "degreeName department type count");
       if (!user) {
         throw AppError.notFound("User not found");
       }

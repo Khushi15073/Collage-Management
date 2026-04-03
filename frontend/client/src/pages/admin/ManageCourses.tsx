@@ -41,6 +41,8 @@ const emptyForm = {
   status: "Active" as "Active" | "Inactive" | "Full",
 };
 
+type FormErrors = Partial<Record<"code" | "name" | "schedule" | "department" | "instructor" | "total", string>>;
+
 const scheduleOptions = [
   "Mon, Wed, Fri 09:00 - 10:00 AM",
   "Mon, Wed, Fri 10:00 - 11:00 AM",
@@ -73,6 +75,7 @@ function ManageCourses() {
   const [form, setForm] = useState(emptyForm);
   const [studentSearch, setStudentSearch] = useState("");
   const [formError, setFormError] = useState("");
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
 
   useEffect(() => {
     dispatch(fetchCourses() as any);
@@ -127,6 +130,7 @@ function ManageCourses() {
     setForm(emptyForm);
     setStudentSearch("");
     setFormError("");
+    setFormErrors({});
   }
 
   function openAddModal() {
@@ -161,23 +165,19 @@ function ManageCourses() {
   }
 
   async function handleSave() {
-    if (form.code === "" || form.name === "" || form.department === "") {
-      setFormError("Course code, name, and department are required.");
-      return;
-    }
+    const nextErrors: FormErrors = {};
 
-    if (form.schedule === "") {
-      setFormError("Please select a schedule.");
-      return;
-    }
+    if (!form.code.trim()) nextErrors.code = "Course code is required.";
+    if (!form.name.trim()) nextErrors.name = "Course name is required.";
+    if (!form.department.trim()) nextErrors.department = "Department is required.";
+    if (!form.schedule) nextErrors.schedule = "Schedule is required.";
+    if (!form.instructor) nextErrors.instructor = "Instructor is required.";
+    if (form.total <= 0) nextErrors.total = "Total seats must be greater than 0.";
 
-    if (form.instructor === "") {
-      setFormError("Please select a faculty member.");
-      return;
-    }
+    setFormErrors(nextErrors);
 
-    if (form.total <= 0) {
-      setFormError("Total seats must be greater than 0.");
+    if (Object.keys(nextErrors).length > 0) {
+      setFormError("");
       return;
     }
 
@@ -227,6 +227,12 @@ function ManageCourses() {
       ...current,
       [name]: numberFields.includes(name) ? Number(value) : value,
     }));
+    setFormErrors((current) => {
+      if (!current[name as keyof FormErrors]) return current;
+      const next = { ...current };
+      delete next[name as keyof FormErrors];
+      return next;
+    });
 
     if (formError) {
       setFormError("");
@@ -459,8 +465,11 @@ function ManageCourses() {
                   value={form.code}
                   onChange={handleFormChange}
                   placeholder="e.g. CS-301"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.code ? "border-red-300" : "border-gray-200"
+                  }`}
                 />
+                {formErrors.code && <p className="mt-1 text-xs text-red-600">{formErrors.code}</p>}
               </div>
 
               <div>
@@ -470,8 +479,11 @@ function ManageCourses() {
                   value={form.name}
                   onChange={handleFormChange}
                   placeholder="e.g. Data Structures"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.name ? "border-red-300" : "border-gray-200"
+                  }`}
                 />
+                {formErrors.name && <p className="mt-1 text-xs text-red-600">{formErrors.name}</p>}
               </div>
 
               <div className="col-span-2">
@@ -480,7 +492,9 @@ function ManageCourses() {
                   name="schedule"
                   value={form.schedule}
                   onChange={handleFormChange}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.schedule ? "border-red-300" : "border-gray-200"
+                  }`}
                 >
                   <option value="">Select schedule</option>
                   {scheduleChoices.map((option) => (
@@ -489,6 +503,7 @@ function ManageCourses() {
                     </option>
                   ))}
                 </select>
+                {formErrors.schedule && <p className="mt-1 text-xs text-red-600">{formErrors.schedule}</p>}
               </div>
 
               <div>
@@ -498,8 +513,11 @@ function ManageCourses() {
                   value={form.department}
                   onChange={handleFormChange}
                   placeholder="e.g. Mathematics"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.department ? "border-red-300" : "border-gray-200"
+                  }`}
                 />
+                {formErrors.department && <p className="mt-1 text-xs text-red-600">{formErrors.department}</p>}
               </div>
 
               <div>
@@ -509,7 +527,9 @@ function ManageCourses() {
                   value={form.instructor}
                   onChange={handleFormChange}
                   disabled={facultyLoading}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 ${
+                    formErrors.instructor ? "border-red-300" : "border-gray-200"
+                  }`}
                 >
                   <option value="">Select faculty</option>
                   {faculty.map((item) => (
@@ -518,6 +538,7 @@ function ManageCourses() {
                     </option>
                   ))}
                 </select>
+                {formErrors.instructor && <p className="mt-1 text-xs text-red-600">{formErrors.instructor}</p>}
               </div>
 
               <div>
@@ -528,8 +549,11 @@ function ManageCourses() {
                   min={1}
                   value={form.total}
                   onChange={handleFormChange}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.total ? "border-red-300" : "border-gray-200"
+                  }`}
                 />
+                {formErrors.total && <p className="mt-1 text-xs text-red-600">{formErrors.total}</p>}
               </div>
 
               <div>

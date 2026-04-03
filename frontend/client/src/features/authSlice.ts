@@ -56,6 +56,14 @@ const initialState: AuthState = {
 };
 
 function normalizeUser(user: AuthResponse["data"]["user"]): AuthUser {
+  if (
+    typeof user.role === "string" &&
+    "permissions" in user &&
+    Array.isArray((user as AuthUser).permissions)
+  ) {
+    return user as AuthUser;
+  }
+
   const normalizedRole =
     typeof user.role === "string"
       ? { name: user.role, permissions: [] }

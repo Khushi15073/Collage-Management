@@ -12,7 +12,7 @@ class UserFactory {
         try {
             const user = new user_schema_1.default(userData);
             await user.save();
-            return await user.populate("role");
+            return await user.populate(["role", "degree"]);
         }
         catch (error) {
             throw error;
@@ -67,7 +67,8 @@ class UserFactory {
                     .sort({ createdAt: -1, _id: -1 })
                     .skip(skip)
                     .limit(limit)
-                    .populate("role"),
+                    .populate("role")
+                    .populate("degree", "degreeName department type count"),
                 user_schema_1.default.countDocuments(filter),
             ]);
             return { users, totalItems };
@@ -87,7 +88,9 @@ class UserFactory {
     }
     async findUserById(userId) {
         try {
-            const user = await user_schema_1.default.findById(userId).populate("role");
+            const user = await user_schema_1.default.findById(userId)
+                .populate("role")
+                .populate("degree", "degreeName department type count");
             if (!user) {
                 throw errorClass_1.AppError.notFound("User not found");
             }
@@ -101,7 +104,9 @@ class UserFactory {
         try {
             const user = await user_schema_1.default.findByIdAndUpdate(userId, updateData, {
                 new: true,
-            }).populate("role");
+            })
+                .populate("role")
+                .populate("degree", "degreeName department type count");
             if (!user) {
                 throw errorClass_1.AppError.notFound("User not found");
             }
@@ -113,7 +118,9 @@ class UserFactory {
     }
     async deleteUser(userId) {
         try {
-            const user = await user_schema_1.default.findByIdAndDelete(userId).populate("role");
+            const user = await user_schema_1.default.findByIdAndDelete(userId)
+                .populate("role")
+                .populate("degree", "degreeName department type count");
             if (!user) {
                 throw errorClass_1.AppError.notFound("User not found");
             }

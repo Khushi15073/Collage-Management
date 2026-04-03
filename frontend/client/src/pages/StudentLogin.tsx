@@ -11,12 +11,17 @@ function StudentLogin() {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [showPass, setShowPass] = useState<boolean>(false);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
 
   const loading = useSelector((state: any) => state.auth.loading);
   const error = useSelector((state: any) => state.auth.error);
 
   async function handleLogin() {
-    if (!email || !password) return;
+    const nextErrors: { email?: string; password?: string } = {};
+    if (!email.trim()) nextErrors.email = "Email is required.";
+    if (!password.trim()) nextErrors.password = "Password is required.";
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
 
     const result = await dispatch(loginUser({ email, password }) as any);
 
@@ -56,10 +61,16 @@ function StudentLogin() {
           <input
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setFieldErrors((current) => ({ ...current, email: undefined }));
+            }}
             placeholder="student@college.edu"
-            className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50"
+            className={`w-full rounded-lg border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 ${
+              fieldErrors.email ? "border-red-300" : "border-gray-200"
+            }`}
           />
+          {fieldErrors.email && <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>}
         </div>
 
         <div className="mb-6">
@@ -71,9 +82,14 @@ function StudentLogin() {
             <input
               type={showPass ? "text" : "password"}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setFieldErrors((current) => ({ ...current, password: undefined }));
+              }}
               placeholder="Enter your password"
-              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 pr-10"
+              className={`w-full rounded-lg border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 pr-10 ${
+                fieldErrors.password ? "border-red-300" : "border-gray-200"
+              }`}
             />
             <button
               onClick={() => setShowPass(!showPass)}
@@ -82,6 +98,7 @@ function StudentLogin() {
               {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
+          {fieldErrors.password && <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p>}
         </div>
 
         <button

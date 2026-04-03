@@ -6,7 +6,6 @@ import {
   createFaculty,
   deleteFaculty,
   fetchFaculty,
-  setFacultyLimit,
   setFacultyPage,
   updateFaculty,
 } from "../../features/facultySlice";
@@ -34,6 +33,8 @@ const emptyForm = {
   password: "",
 };
 
+type FormErrors = Partial<Record<keyof typeof emptyForm, string>>;
+
 function ManageFaculty() {
   const dispatch = useDispatch();
   const { searchQuery } = useDashboardSearch();
@@ -54,6 +55,7 @@ function ManageFaculty() {
   const [showModal, setShowModal] = useState(false);
   const [editFaculty, setEditFaculty] = useState<Faculty | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [emailNotice, setEmailNotice] = useState<{ sent: boolean; message: string } | null>(null);
   const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
   const previousSearchRef = useRef(searchQuery);
@@ -101,6 +103,7 @@ function ManageFaculty() {
       ...emptyForm,
       role: roleId || facultyRoleId,
     });
+    setFormErrors({});
   }
 
   function openAddModal() {
@@ -132,16 +135,17 @@ function ManageFaculty() {
   }
 
   async function handleSave() {
-    if (
-      form.name === "" ||
-      form.email === "" ||
-      form.phoneNumber === "" ||
-      form.role === ""
-    ) {
-      return;
-    }
+    const nextErrors: FormErrors = {};
 
-    if (editFaculty == null && form.password === "") {
+    if (!form.name.trim()) nextErrors.name = "Full name is required.";
+    if (!form.email.trim()) nextErrors.email = "Email is required.";
+    if (!form.phoneNumber.trim()) nextErrors.phoneNumber = "Phone number is required.";
+    if (!form.role) nextErrors.role = "Role is required.";
+    if (editFaculty == null && !form.password.trim()) nextErrors.password = "Password is required.";
+
+    setFormErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
       return;
     }
 
@@ -222,6 +226,12 @@ function ManageFaculty() {
       ...form,
       [event.target.name]: event.target.value,
     });
+    setFormErrors((current) => {
+      if (!current[event.target.name as keyof typeof emptyForm]) return current;
+      const next = { ...current };
+      delete next[event.target.name as keyof typeof emptyForm];
+      return next;
+    });
 
     if (error) {
       dispatch(clearFacultyError());
@@ -276,25 +286,7 @@ function ManageFaculty() {
         <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-base font-semibold text-gray-800">Faculty List</h2>
-            <p className="mt-1 text-sm text-gray-400">
-              Page {totalPages === 0 ? 0 : currentPage} of {totalPages}
-            </p>
           </div>
-
-          <label className="flex items-center gap-2 text-sm text-gray-500">
-            <span>Rows</span>
-            <select
-              value={limit}
-              onChange={(event) => dispatch(setFacultyLimit(Number(event.target.value)))}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {[10, 20, 50, 100].map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
 
         <TableContainer className="min-h-0 flex-1 overflow-auto">
@@ -413,8 +405,11 @@ function ManageFaculty() {
                   value={form.name}
                   onChange={handleFormChange}
                   placeholder="Enter faculty name"
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full rounded-lg border bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.name ? "border-red-300" : "border-gray-200"
+                  }`}
                 />
+                {formErrors.name && <p className="mt-1 text-xs text-red-600">{formErrors.name}</p>}
               </div>
 
               <div className="sm:col-span-2">
@@ -425,8 +420,11 @@ function ManageFaculty() {
                   value={form.email}
                   onChange={handleFormChange}
                   placeholder="faculty@college.edu"
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full rounded-lg border bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.email ? "border-red-300" : "border-gray-200"
+                  }`}
                 />
+                {formErrors.email && <p className="mt-1 text-xs text-red-600">{formErrors.email}</p>}
               </div>
 
               <div>
@@ -436,8 +434,11 @@ function ManageFaculty() {
                   value={form.phoneNumber}
                   onChange={handleFormChange}
                   placeholder="Enter phone number"
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full rounded-lg border bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.phoneNumber ? "border-red-300" : "border-gray-200"
+                  }`}
                 />
+                {formErrors.phoneNumber && <p className="mt-1 text-xs text-red-600">{formErrors.phoneNumber}</p>}
               </div>
 
               <div>
@@ -461,7 +462,9 @@ function ManageFaculty() {
                   value={form.role}
                   onChange={handleFormChange}
                   disabled={rolesLoading}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  className={`w-full rounded-lg border bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 ${
+                    formErrors.role ? "border-red-300" : "border-gray-200"
+                  }`}
                 >
                   <option value="">{rolesLoading ? "Loading roles..." : "Select role"}</option>
                   {roles.map((role: any) => (
@@ -470,6 +473,7 @@ function ManageFaculty() {
                     </option>
                   ))}
                 </select>
+                {formErrors.role && <p className="mt-1 text-xs text-red-600">{formErrors.role}</p>}
               </div>
 
               <div className="sm:col-span-2">
@@ -482,8 +486,11 @@ function ManageFaculty() {
                   value={form.password}
                   onChange={handleFormChange}
                   placeholder={editFaculty ? "Leave blank to keep current" : "Enter a password"}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full rounded-lg border bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.password ? "border-red-300" : "border-gray-200"
+                  }`}
                 />
+                {formErrors.password && <p className="mt-1 text-xs text-red-600">{formErrors.password}</p>}
               </div>
             </div>
 

@@ -69,6 +69,11 @@ const userSchema = new mongoose_1.default.Schema({
         type: mongoose_1.Schema.Types.ObjectId,
         ref: 'Role',
         required: true
+    },
+    degree: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "Degree",
+        default: null,
     }
 }, {
     timestamps: true,
