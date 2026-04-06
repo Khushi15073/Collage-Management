@@ -4,6 +4,7 @@ exports.CourseFactory = void 0;
 const mongoose_1 = require("mongoose");
 const course_schema_1 = require("../schemas/course.schema");
 const degree_schema_1 = require("../schemas/degree.schema");
+const errorClass_1 = require("../utility/errorClass");
 class CourseFactory {
     applyEnrollment(course, studentIds) {
         const uniqueStudents = Array.from(new Set(studentIds));
@@ -73,7 +74,7 @@ class CourseFactory {
             await course.save();
         }
     }
-    async replaceCoursesForDegree(degreeId, department, sections) {
+    async replaceCoursesForDegree(degreeId, department, sections, totalSeats) {
         const degreeObjectId = new mongoose_1.Types.ObjectId(degreeId);
         const degreeCourses = sections.flatMap((section) => section.courses.map((course) => ({
             code: course.code,
@@ -89,6 +90,11 @@ class CourseFactory {
         if (degreeCourses.length === 0) {
             return [];
         }
+        const existingCourses = await course_schema_1.CourseModel.find({ sourceDegree: degreeObjectId }).select("code enrolled");
+        const overbookedCourse = existingCourses.find((course) => course.enrolled > totalSeats);
+        if (overbookedCourse) {
+            throw errorClass_1.AppError.badRequest(`Cannot reduce degree seats below current enrollment for course "${overbookedCourse.code}"`);
+        }
         await course_schema_1.CourseModel.bulkWrite(degreeCourses.map((course) => ({
             updateOne: {
                 filter: {
@@ -100,10 +106,10 @@ class CourseFactory {
                         name: course.name,
                         department: course.department,
                         sourceSectionKey: course.sourceSectionKey,
+                        total: totalSeats,
                     },
                     $setOnInsert: {
                         credits: 0,
-                        total: 50,
                         enrolled: 0,
                         students: [],
                         status: "Active",
@@ -121,9 +127,9 @@ class CourseFactory {
         return course_schema_1.CourseModel.deleteMany({ sourceDegree: degreeId });
     }
     async syncCoursesFromDegrees() {
-        const degrees = await degree_schema_1.DegreeModel.find().select("department sections");
+        const degrees = await degree_schema_1.DegreeModel.find().select("department sections totalSeats");
         for (const degree of degrees) {
-            await this.replaceCoursesForDegree(String(degree._id), degree.department, degree.sections);
+            await this.replaceCoursesForDegree(String(degree._id), degree.department, degree.sections, degree.totalSeats);
         }
     }
     // ── Update course by ID ──

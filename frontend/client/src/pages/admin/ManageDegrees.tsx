@@ -69,6 +69,7 @@ function ManageDegrees() {
   const [department, setDepartment] = useState("");
   const [modeType, setModeType] = useState<DegreeMode>("semester");
   const [count, setCount] = useState(4);
+  const [totalSeats, setTotalSeats] = useState(50);
   const [sections, setSections] = useState<DegreeSection[]>(() => createSections("semester", 4));
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<string[]>([]);
@@ -294,6 +295,7 @@ function ManageDegrees() {
     setDepartment("");
     setModeType("semester");
     setCount(4);
+    setTotalSeats(50);
     setSections(createSections("semester", 4));
     setCollapsedSections({});
     setErrors([]);
@@ -306,6 +308,7 @@ function ManageDegrees() {
     setDepartment(degree.department);
     setModeType(degree.type as DegreeMode);
     setCount(degree.count);
+    setTotalSeats(degree.totalSeats);
     setSections(
       degree.sections.map((section) => ({
         key: section.key,
@@ -343,6 +346,10 @@ function ManageDegrees() {
       nextErrors.push("Year wise degrees must use a year count between 1 and 5.");
     }
 
+    if (!Number.isFinite(totalSeats) || totalSeats <= 0) {
+      nextErrors.push("Number of seats is required.");
+    }
+
     sections.forEach((section) => {
       if (section.courses.length === 0) {
         nextErrors.push(`${section.label} requires at least one course.`);
@@ -360,6 +367,7 @@ function ManageDegrees() {
       department: department.trim(),
       type: modeType,
       count,
+      totalSeats,
       sections: sections.map((section) => ({
         key: section.key,
         label: section.label,
@@ -379,6 +387,7 @@ function ManageDegrees() {
         setDepartment("");
         setModeType("semester");
         setCount(4);
+        setTotalSeats(50);
         setSections(createSections("semester", 4));
         setCollapsedSections({});
         setEditingDegreeId(null);
@@ -396,6 +405,7 @@ function ManageDegrees() {
         setDepartment("");
         setModeType("semester");
         setCount(4);
+        setTotalSeats(50);
         setSections(createSections("semester", 4));
         setCollapsedSections({});
         setMode('list');
@@ -456,7 +466,7 @@ function ManageDegrees() {
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">{degree.degreeName}</h3>
                       <p className="mt-1 text-sm text-gray-500">
-                        {degree.department} • {degree.type === "semester" ? "Semester Wise" : "Year Wise"} • {degree.count} {degree.type === "semester" ? "Semesters" : "Years"}
+                        {degree.department} • {degree.type === "semester" ? "Semester Wise" : "Year Wise"} • {degree.count} {degree.type === "semester" ? "Semesters" : "Years"} • {degree.totalSeats} seats
                       </p>
                       <p className="mt-2 text-sm text-gray-400">
                         Created on {new Date(degree.createdDate).toLocaleDateString("en-IN", {
@@ -670,6 +680,20 @@ function ManageDegrees() {
                     : "Configurable year count from 1 to 5."}
                 </p>
               </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Number of Seats</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={totalSeats}
+                  onChange={(event) => setTotalSeats(Number(event.target.value))}
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="mt-1 text-xs text-gray-400">
+                  This seat limit will be applied automatically to all courses generated from this degree.
+                </p>
+              </div>
             </div>
           </section>
 
@@ -868,6 +892,9 @@ function ManageDegrees() {
                 <div className="mt-1 text-sm text-gray-700">
                   Total Courses: {sections.reduce((sum, section) => sum + section.courses.length, 0)}
                 </div>
+                <div className="mt-1 text-sm text-gray-700">
+                  Seats per Course: {totalSeats}
+                </div>
               </div>
             </div>
           </section>
@@ -885,6 +912,9 @@ function ManageDegrees() {
                     <div className="mt-1 text-gray-500">
                       {latestSavedDegree.department} •{" "}
                       {latestSavedDegree.type === "semester" ? "Semester Wise" : "Year Wise"}
+                    </div>
+                    <div className="mt-1 text-gray-500">
+                      {latestSavedDegree.totalSeats} seats
                     </div>
                   </div>
 

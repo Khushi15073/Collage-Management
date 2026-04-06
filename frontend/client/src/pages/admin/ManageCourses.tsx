@@ -156,7 +156,7 @@ function ManageCourses() {
     if (!form.name.trim()) nextErrors.name = "Course name is required.";
     if (!form.department.trim()) nextErrors.department = "Department is required.";
     if (!form.instructor) nextErrors.instructor = "Instructor is required.";
-    if (form.total <= 0) nextErrors.total = "Total seats must be greater than 0.";
+    if (!editCourse && form.total <= 0) nextErrors.total = "Total seats must be greater than 0.";
 
     setFormErrors(nextErrors);
 
@@ -524,20 +524,32 @@ function ManageCourses() {
                 {formErrors.instructor && <p className="mt-1 text-xs text-red-600">{formErrors.instructor}</p>}
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1">Total Seats</label>
-                <input
-                  name="total"
-                  type="number"
-                  min={1}
-                  value={form.total}
-                  onChange={handleFormChange}
-                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    formErrors.total ? "border-red-300" : "border-gray-200"
-                  }`}
-                />
-                {formErrors.total && <p className="mt-1 text-xs text-red-600">{formErrors.total}</p>}
-              </div>
+              {!editCourse ? (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Total Seats</label>
+                  <input
+                    name="total"
+                    type="number"
+                    min={1}
+                    value={form.total}
+                    onChange={handleFormChange}
+                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      formErrors.total ? "border-red-300" : "border-gray-200"
+                    }`}
+                  />
+                  {formErrors.total && <p className="mt-1 text-xs text-red-600">{formErrors.total}</p>}
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Total Seats</label>
+                  <div className="rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-600">
+                    {form.total}
+                  </div>
+                  <p className="mt-1 text-xs text-gray-400">
+                    Seats are managed from the degree settings for existing courses.
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Status</label>

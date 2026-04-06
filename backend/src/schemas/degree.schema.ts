@@ -60,6 +60,11 @@ const degreeSchema = new Schema<IDegree>(
       required: true,
       min: 1,
     },
+    totalSeats: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
     sections: {
       type: [degreeSectionSchema],
       default: [],

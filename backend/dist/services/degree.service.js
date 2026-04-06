@@ -85,12 +85,16 @@ class DegreeService {
         if (data.type === "year" && ![1, 2, 3, 4, 5].includes(data.count)) {
             throw errorClass_1.AppError.badRequest("Year wise degrees only allow between 1 and 5 years");
         }
+        if (!Number.isFinite(data.totalSeats) || data.totalSeats <= 0) {
+            throw errorClass_1.AppError.badRequest("Number of seats is required");
+        }
         this.validateSections(data.type, data.count, data.sections);
         await this.ensureCourseCodesAvailable(data.sections);
         const degree = await this.degreeFactory.createDegree({
             ...data,
             degreeName: data.degreeName.trim(),
             department: data.department.trim(),
+            totalSeats: Number(data.totalSeats),
             createdBy,
             sections: data.sections.map((section) => ({
                 ...section,
@@ -103,7 +107,7 @@ class DegreeService {
             })),
         });
         const populatedDegree = await this.degreeFactory.findDegreeById(String(degree._id));
-        await this.courseFactory.replaceCoursesForDegree(String(degree._id), degree.department, degree.sections);
+        await this.courseFactory.replaceCoursesForDegree(String(degree._id), degree.department, degree.sections, degree.totalSeats);
         return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.CREATED, "Degree created successfully", this.decorateDegree(populatedDegree));
     }
     async getAllDegrees() {
@@ -118,27 +122,32 @@ class DegreeService {
         return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.OK, "Degree fetched successfully", this.decorateDegree(degree));
     }
     async updateDegree(id, data) {
-        var _a, _b, _c, _d, _e, _f;
+        var _a, _b, _c, _d, _e, _f, _g;
         const existing = await this.degreeFactory.findDegreeById(id);
         if (!existing) {
             throw errorClass_1.AppError.notFound("Degree not found");
         }
         const nextType = (_a = data.type) !== null && _a !== void 0 ? _a : existing.type;
         const nextCount = (_b = data.count) !== null && _b !== void 0 ? _b : existing.count;
-        const nextSections = (_c = data.sections) !== null && _c !== void 0 ? _c : existing.sections;
+        const nextTotalSeats = (_c = data.totalSeats) !== null && _c !== void 0 ? _c : existing.totalSeats;
+        const nextSections = (_d = data.sections) !== null && _d !== void 0 ? _d : existing.sections;
         if (nextType === "semester" && ![2, 4, 6, 8].includes(nextCount)) {
             throw errorClass_1.AppError.badRequest("Semester wise degrees only allow 2, 4, 6, or 8 semesters");
         }
         if (nextType === "year" && ![1, 2, 3, 4, 5].includes(nextCount)) {
             throw errorClass_1.AppError.badRequest("Year wise degrees only allow between 1 and 5 years");
         }
+        if (!Number.isFinite(nextTotalSeats) || nextTotalSeats <= 0) {
+            throw errorClass_1.AppError.badRequest("Number of seats is required");
+        }
         this.validateSections(nextType, nextCount, nextSections);
         await this.ensureCourseCodesAvailable(nextSections, id);
         const normalizedData = {
             ...data,
-            degreeName: (_d = data.degreeName) === null || _d === void 0 ? void 0 : _d.trim(),
-            department: (_e = data.department) === null || _e === void 0 ? void 0 : _e.trim(),
-            sections: (_f = data.sections) === null || _f === void 0 ? void 0 : _f.map((section) => ({
+            degreeName: (_e = data.degreeName) === null || _e === void 0 ? void 0 : _e.trim(),
+            department: (_f = data.department) === null || _f === void 0 ? void 0 : _f.trim(),
+            totalSeats: data.totalSeats !== undefined ? Number(data.totalSeats) : undefined,
+            sections: (_g = data.sections) === null || _g === void 0 ? void 0 : _g.map((section) => ({
                 ...section,
                 key: section.key.trim(),
                 label: section.label.trim(),
@@ -152,7 +161,7 @@ class DegreeService {
         if (!updated) {
             throw errorClass_1.AppError.notFound("Degree not found");
         }
-        await this.courseFactory.replaceCoursesForDegree(id, updated.department, updated.sections);
+        await this.courseFactory.replaceCoursesForDegree(id, updated.department, updated.sections, updated.totalSeats);
         return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.OK, "Degree updated successfully", this.decorateDegree(updated));
     }
     async deleteDegree(id) {

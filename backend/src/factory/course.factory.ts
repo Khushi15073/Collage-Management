@@ -3,6 +3,7 @@ import { CourseModel } from "../schemas/course.schema";
 import { CreateCourseDTO, UpdateCourseDTO } from "../interfaces/course.interface";
 import type { IDegreeSection } from "../interfaces/degree.interface";
 import { DegreeModel } from "../schemas/degree.schema";
+import { AppError } from "../utility/errorClass";
 
 export class CourseFactory {
   private applyEnrollment(course: any, studentIds: string[]) {
@@ -93,7 +94,8 @@ export class CourseFactory {
   async replaceCoursesForDegree(
     degreeId: string,
     department: string,
-    sections: IDegreeSection[]
+    sections: IDegreeSection[],
+    totalSeats: number
   ) {
     const degreeObjectId = new Types.ObjectId(degreeId);
     const degreeCourses = sections.flatMap((section) =>
@@ -116,6 +118,14 @@ export class CourseFactory {
       return [];
     }
 
+    const existingCourses = await CourseModel.find({ sourceDegree: degreeObjectId }).select("code enrolled");
+    const overbookedCourse = existingCourses.find((course) => course.enrolled > totalSeats);
+    if (overbookedCourse) {
+      throw AppError.badRequest(
+        `Cannot reduce degree seats below current enrollment for course "${overbookedCourse.code}"`
+      );
+    }
+
     await CourseModel.bulkWrite(
       degreeCourses.map((course) => ({
         updateOne: {
@@ -128,10 +138,10 @@ export class CourseFactory {
               name: course.name,
               department: course.department,
               sourceSectionKey: course.sourceSectionKey,
+              total: totalSeats,
             },
             $setOnInsert: {
               credits: 0,
-              total: 50,
               enrolled: 0,
               students: [],
               status: "Active",
@@ -153,13 +163,14 @@ export class CourseFactory {
   }
 
   async syncCoursesFromDegrees() {
-    const degrees = await DegreeModel.find().select("department sections");
+    const degrees = await DegreeModel.find().select("department sections totalSeats");
 
     for (const degree of degrees) {
       await this.replaceCoursesForDegree(
         String(degree._id),
         degree.department,
-        degree.sections as IDegreeSection[]
+        degree.sections as IDegreeSection[],
+        degree.totalSeats
       );
     }
   }

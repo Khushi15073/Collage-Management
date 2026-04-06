@@ -104,6 +104,10 @@ export class DegreeService {
       throw AppError.badRequest("Year wise degrees only allow between 1 and 5 years");
     }
 
+    if (!Number.isFinite(data.totalSeats) || data.totalSeats <= 0) {
+      throw AppError.badRequest("Number of seats is required");
+    }
+
     this.validateSections(data.type, data.count, data.sections);
     await this.ensureCourseCodesAvailable(data.sections);
 
@@ -111,6 +115,7 @@ export class DegreeService {
       ...data,
       degreeName: data.degreeName.trim(),
       department: data.department.trim(),
+      totalSeats: Number(data.totalSeats),
       createdBy,
       sections: data.sections.map((section) => ({
         ...section,
@@ -128,7 +133,8 @@ export class DegreeService {
     await this.courseFactory.replaceCoursesForDegree(
       String(degree._id),
       degree.department,
-      degree.sections
+      degree.sections,
+      degree.totalSeats
     );
 
     return ResponseHandler.sendResponse(
@@ -169,6 +175,7 @@ export class DegreeService {
 
     const nextType = data.type ?? existing.type;
     const nextCount = data.count ?? existing.count;
+    const nextTotalSeats = data.totalSeats ?? existing.totalSeats;
     const nextSections = data.sections ?? existing.sections;
 
     if (nextType === "semester" && ![2, 4, 6, 8].includes(nextCount)) {
@@ -179,6 +186,10 @@ export class DegreeService {
       throw AppError.badRequest("Year wise degrees only allow between 1 and 5 years");
     }
 
+    if (!Number.isFinite(nextTotalSeats) || nextTotalSeats <= 0) {
+      throw AppError.badRequest("Number of seats is required");
+    }
+
     this.validateSections(nextType, nextCount, nextSections as IDegreeSection[]);
     await this.ensureCourseCodesAvailable(nextSections as IDegreeSection[], id);
 
@@ -186,6 +197,7 @@ export class DegreeService {
       ...data,
       degreeName: data.degreeName?.trim(),
       department: data.department?.trim(),
+      totalSeats: data.totalSeats !== undefined ? Number(data.totalSeats) : undefined,
       sections: data.sections?.map((section) => ({
         ...section,
         key: section.key.trim(),
@@ -206,7 +218,8 @@ export class DegreeService {
     await this.courseFactory.replaceCoursesForDegree(
       id,
       updated.department,
-      updated.sections as IDegreeSection[]
+      updated.sections as IDegreeSection[],
+      updated.totalSeats
     );
 
     return ResponseHandler.sendResponse(

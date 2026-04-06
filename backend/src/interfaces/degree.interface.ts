@@ -19,6 +19,7 @@ export interface IDegree {
   department: string;
   type: DegreeType;
   count: number;
+  totalSeats: number;
   sections: IDegreeSection[];
   createdBy: mongoose.Types.ObjectId;
   availableEnrollmentYears?: number[];
@@ -31,6 +32,7 @@ export interface CreateDegreeDTO {
   department: string;
   type: DegreeType;
   count: number;
+  totalSeats: number;
   sections: IDegreeSection[];
 }
 
@@ -39,5 +41,6 @@ export interface UpdateDegreeDTO {
   department?: string;
   type?: DegreeType;
   count?: number;
+  totalSeats?: number;
   sections?: IDegreeSection[];
 }

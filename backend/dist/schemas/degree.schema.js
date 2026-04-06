@@ -85,6 +85,11 @@ const degreeSchema = new mongoose_1.Schema({
         required: true,
         min: 1,
     },
+    totalSeats: {
+        type: Number,
+        required: true,
+        min: 1,
+    },
     sections: {
         type: [degreeSectionSchema],
         default: [],

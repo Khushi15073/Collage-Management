@@ -24,6 +24,7 @@ export type DegreeRecord = {
   department: string;
   type: DegreeMode;
   count: number;
+  totalSeats: number;
   availableEnrollmentYears: number[];
   createdBy: string;
   createdDate: string;
@@ -35,6 +36,7 @@ type SaveDegreePayload = {
   department: string;
   type: DegreeMode;
   count: number;
+  totalSeats: number;
   sections: DegreeSection[];
 };
 
@@ -57,6 +59,7 @@ function normalizeDegree(degree: any): DegreeRecord {
     department: degree.department ?? "",
     type: (degree.type ?? "semester") as DegreeMode,
     count: Number(degree.count ?? 0),
+    totalSeats: Number(degree.totalSeats ?? 0),
     availableEnrollmentYears: Array.isArray(degree.availableEnrollmentYears)
       ? degree.availableEnrollmentYears.map((year: number) => Number(year))
       : [],
