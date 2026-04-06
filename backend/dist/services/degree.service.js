@@ -14,6 +14,22 @@ class DegreeService {
         this.degreeFactory = new degree_factory_1.DegreeFactory();
         this.courseFactory = new course_factory_1.CourseFactory();
     }
+    buildEnrollmentYears() {
+        const currentYear = new Date().getFullYear();
+        return Array.from({ length: 10 }, (_, index) => currentYear - index);
+    }
+    decorateDegree(degree) {
+        if (!degree) {
+            return degree;
+        }
+        const normalizedDegree = typeof degree.toObject === "function"
+            ? degree.toObject()
+            : degree;
+        return {
+            ...normalizedDegree,
+            availableEnrollmentYears: this.buildEnrollmentYears(),
+        };
+    }
     async ensureCourseCodesAvailable(sections, degreeId) {
         const codes = sections.flatMap((section) => section.courses.map((course) => course.code.trim().toUpperCase()));
         const conflicts = await this.courseFactory.findCoursesByCodes(codes, degreeId);
@@ -88,18 +104,18 @@ class DegreeService {
         });
         const populatedDegree = await this.degreeFactory.findDegreeById(String(degree._id));
         await this.courseFactory.replaceCoursesForDegree(String(degree._id), degree.department, degree.sections);
-        return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.CREATED, "Degree created successfully", populatedDegree);
+        return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.CREATED, "Degree created successfully", this.decorateDegree(populatedDegree));
     }
     async getAllDegrees() {
         const degrees = await this.degreeFactory.findAllDegrees();
-        return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.OK, "Degrees fetched successfully", degrees);
+        return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.OK, "Degrees fetched successfully", degrees.map((degree) => this.decorateDegree(degree)));
     }
     async getDegreeById(id) {
         const degree = await this.degreeFactory.findDegreeById(id);
         if (!degree) {
             throw errorClass_1.AppError.notFound("Degree not found");
         }
-        return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.OK, "Degree fetched successfully", degree);
+        return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.OK, "Degree fetched successfully", this.decorateDegree(degree));
     }
     async updateDegree(id, data) {
         var _a, _b, _c, _d, _e, _f;
@@ -137,7 +153,7 @@ class DegreeService {
             throw errorClass_1.AppError.notFound("Degree not found");
         }
         await this.courseFactory.replaceCoursesForDegree(id, updated.department, updated.sections);
-        return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.OK, "Degree updated successfully", updated);
+        return responseHandler_1.default.sendResponse(responseCodes_1.ResponseCodes.OK, "Degree updated successfully", this.decorateDegree(updated));
     }
     async deleteDegree(id) {
         const existing = await this.degreeFactory.findDegreeById(id);

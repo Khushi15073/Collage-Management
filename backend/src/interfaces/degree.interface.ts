@@ -21,6 +21,7 @@ export interface IDegree {
   count: number;
   sections: IDegreeSection[];
   createdBy: mongoose.Types.ObjectId;
+  availableEnrollmentYears?: number[];
   createdAt?: Date;
   updatedAt?: Date;
 }

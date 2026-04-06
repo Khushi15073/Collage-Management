@@ -3,8 +3,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { logoutUser } from "../features/authSlice";
 import { formatRoleName } from "../access/appAccess";
 import FacultySidebar from "../components/FacultySidebar";
-import { DashboardSearchProvider } from "../context/DashboardSearchContext";
-import SearchField from "../components/ui/SearchField";
 
 interface FacultyLayoutProps {
   children: React.ReactNode;
@@ -12,7 +10,6 @@ interface FacultyLayoutProps {
 
 function FacultyLayout({ children }: FacultyLayoutProps) {
   const [collapsed, setCollapsed] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const dispatch = useDispatch();
 
   // ✅ User from Redux — not hardcoded
@@ -31,7 +28,6 @@ function FacultyLayout({ children }: FacultyLayoutProps) {
   }
 
   return (
-    <DashboardSearchProvider value={{ searchQuery, setSearchQuery }}>
       <div className="flex h-screen bg-gray-50 font-sans overflow-hidden">
 
         {/* ── Sidebar ── */}
@@ -45,13 +41,8 @@ function FacultyLayout({ children }: FacultyLayoutProps) {
 
           {/* ── Header ── */}
           <header className="sticky top-0 z-20 shrink-0 flex items-center gap-4 border-b border-gray-100 bg-white px-6 py-3 shadow-sm">
-            {/* Search */}
-            <div className="flex-1 max-w-md">
-              <SearchField value={searchQuery} onChange={setSearchQuery} />
-            </div>
-
             {/* Right side */}
-            <div className="flex items-center gap-3 ml-auto">
+            <div className="ml-auto flex items-center gap-3">
               {/* Bell */}
               <button className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-xl transition-colors">
                 🔔
@@ -88,7 +79,6 @@ function FacultyLayout({ children }: FacultyLayoutProps) {
 
         </div>
       </div>
-    </DashboardSearchProvider>
   );
 }
 

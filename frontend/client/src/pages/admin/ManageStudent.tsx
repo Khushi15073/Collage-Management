@@ -22,8 +22,9 @@ import {
   TableRow,
 } from "../../components/ui/Table";
 import PaginationControls from "../../components/ui/PaginationControls";
-import { useDashboardSearch } from "../../context/DashboardSearchContext";
 import { hasPermission } from "../../access/appAccess";
+import SearchField from "../../components/ui/SearchField";
+import { useToastMessage } from "../../hooks/useToastMessage";
 
 const emptyForm = {
   name: "",
@@ -33,13 +34,14 @@ const emptyForm = {
   gender: "male" as "male" | "female" | "other",
   role: "",
   degree: "",
+  enrollmentDate: "",
 };
 
 type FormErrors = Partial<Record<keyof typeof emptyForm, string>>;
 
 function ManageStudents() {
   const dispatch = useDispatch();
-  const { searchQuery } = useDashboardSearch();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const students = useSelector((state: any) => state.students.students);
   const loading = useSelector((state: any) => state.students.loading);
@@ -127,6 +129,7 @@ function ManageStudents() {
       gender: student.gender,
       role: student.role?._id || "",
       degree: student.degree?.id || "",
+      enrollmentDate: student.enrollmentDate || "",
     });
     setFormErrors({});
     dispatch(clearStudentError());
@@ -141,6 +144,7 @@ function ManageStudents() {
     if (!form.phoneNumber.trim()) nextErrors.phoneNumber = "Phone number is required.";
     if (!form.role) nextErrors.role = "Role is required.";
     if (!form.degree) nextErrors.degree = "Degree is required.";
+    if (!form.enrollmentDate) nextErrors.enrollmentDate = "Enrollment date is required.";
     if (!editStudent && !form.password.trim()) nextErrors.password = "Password is required.";
 
     setFormErrors(nextErrors);
@@ -157,6 +161,7 @@ function ManageStudents() {
           gender: form.gender,
           role: form.role,
           degree: form.degree,
+          enrollmentDate: form.enrollmentDate,
           ...(form.password ? { password: form.password } : {}),
         }) as any
       );
@@ -181,6 +186,7 @@ function ManageStudents() {
           gender: form.gender,
           role: form.role,
           degree: form.degree,
+          enrollmentDate: form.enrollmentDate,
         }) as any
       );
 
@@ -219,7 +225,10 @@ function ManageStudents() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) {
     const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
+    setForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
     setFormErrors((current) => {
       if (!current[name as keyof typeof emptyForm]) return current;
       const next = { ...current };
@@ -230,6 +239,13 @@ function ManageStudents() {
   }
 
   const pageError = error || roleError || degreeError;
+  const selectedDegree = degrees.find((degree) => degree.id === form.degree);
+  const derivedEnrollmentYear = form.enrollmentDate
+    ? new Date(form.enrollmentDate).getFullYear()
+    : "";
+  const derivedBatch = selectedDegree && derivedEnrollmentYear
+    ? `${selectedDegree.degreeName} ${derivedEnrollmentYear}`
+    : "";
   const isSessionError =
     pageError === "Session expired. Please log in again." ||
     pageError === "Unauthorized" ||
@@ -241,6 +257,8 @@ function ManageStudents() {
   const canCreate = hasPermission(user, "create_students");
   const canUpdate = hasPermission(user, "update_students");
   const canDelete = hasPermission(user, "delete_students");
+  useToastMessage(isSessionError ? null : pageError, "error");
+  useToastMessage(emailNotice?.message, emailNotice?.sent ? "success" : "info");
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-gray-50 p-8">
@@ -256,6 +274,14 @@ function ManageStudents() {
         >
           + Add Student
         </button>
+      </div>
+
+      <div className="mb-5 max-w-md">
+        <SearchField
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search students..."
+        />
       </div>
 
       {pageError && (
@@ -293,6 +319,9 @@ function ManageStudents() {
                   <TableHeader>Gender</TableHeader>
                   <TableHeader>Role</TableHeader>
                   <TableHeader>Degree</TableHeader>
+                  <TableHeader>Batch</TableHeader>
+                  <TableHeader>Enrollment Year</TableHeader>
+                  <TableHeader>Enrollment Date</TableHeader>
                   <TableHeader>Actions</TableHeader>
                 </TableRow>
               </TableHead>
@@ -310,6 +339,15 @@ function ManageStudents() {
                     </TableCell>
                     <TableCell className="text-gray-500 text-xs">
                       {student.degree?.degreeName || "-"}
+                    </TableCell>
+                    <TableCell className="text-gray-500 text-xs">
+                      {student.batch || "-"}
+                    </TableCell>
+                    <TableCell className="text-gray-500 text-xs">
+                      {student.enrollmentYear || "-"}
+                    </TableCell>
+                    <TableCell className="text-gray-500 text-xs">
+                      {student.enrollmentDate || "-"}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -333,7 +371,7 @@ function ManageStudents() {
                 ))}
                 {students.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-12 text-center text-sm text-gray-400">
+                    <TableCell colSpan={10} className="py-12 text-center text-sm text-gray-400">
                       {pageError ? "Unable to load students." : "No students found."}
                     </TableCell>
                   </TableRow>
@@ -502,6 +540,41 @@ function ManageStudents() {
                 </select>
                 {formErrors.degree && <p className="mt-1 text-xs text-red-600">{formErrors.degree}</p>}
               </div>
+
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-sm font-medium text-gray-700">Enrollment Date</label>
+                <input
+                  type="date"
+                  name="enrollmentDate"
+                  value={form.enrollmentDate}
+                  onChange={handleFormChange}
+                  className={`w-full rounded-lg border bg-gray-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 ${
+                    formErrors.enrollmentDate ? "border-red-300" : "border-gray-200"
+                  }`}
+                  max={new Date().toISOString().split("T")[0]}
+                />
+                {formErrors.enrollmentDate && <p className="mt-1 text-xs text-red-600">{formErrors.enrollmentDate}</p>}
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Enrollment Year</label>
+                <input
+                  value={derivedEnrollmentYear}
+                  readOnly
+                  className="w-full rounded-lg border border-gray-200 bg-gray-100 px-4 py-2.5 text-sm text-gray-600 focus:outline-none"
+                  placeholder="Auto from enrollment date"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Batch</label>
+                <input
+                  value={derivedBatch}
+                  readOnly
+                  className="w-full rounded-lg border border-gray-200 bg-gray-100 px-4 py-2.5 text-sm text-gray-600 focus:outline-none"
+                  placeholder="Auto from degree and year"
+                />
+              </div>
             </div>
 
             <div className="mt-6 flex justify-end gap-3">
@@ -523,32 +596,6 @@ function ManageStudents() {
         </div>
       )}
 
-      {emailNotice && (
-        <div className="fixed bottom-6 right-6 z-50 w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl">
-          <div className="mb-3 flex items-start justify-between gap-4">
-            <div>
-              <h3 className="text-base font-semibold text-gray-900">Student Created</h3>
-              <p className="mt-1 text-xs text-gray-400">Credential email delivery status</p>
-            </div>
-            <button
-              onClick={() => setEmailNotice(null)}
-              className="rounded-lg px-2 py-1 text-xs text-gray-500 hover:bg-gray-100"
-            >
-              Close
-            </button>
-          </div>
-
-          <div
-            className={`rounded-xl p-4 text-sm ${
-              emailNotice.sent
-                ? "bg-green-50 text-green-700"
-                : "bg-amber-50 text-amber-700"
-            }`}
-          >
-            {emailNotice.message}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

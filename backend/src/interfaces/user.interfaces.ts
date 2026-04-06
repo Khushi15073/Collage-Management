@@ -9,6 +9,9 @@ export interface IUser {
     password: string;
     role: mongoose.Types.ObjectId | IRole;
     degree?: mongoose.Types.ObjectId | null;
+    batch?: string | null;
+    enrollmentYear?: number | null;
+    enrollmentDate?: Date | null;
    
 }
 
@@ -21,6 +24,9 @@ export interface CreateUserDTO {
     password: string;
     role?: any;
     degree?: string;
+    batch?: string;
+    enrollmentYear?: number;
+    enrollmentDate?: string;
 }
 
 //  Update User
@@ -32,6 +38,9 @@ export interface UpdateUserDTO {
     password?: string;
     role?: string;
     degree?: string | null;
+    batch?: string | null;
+    enrollmentYear?: number | null;
+    enrollmentDate?: string | null;
 }
 
 //  Login

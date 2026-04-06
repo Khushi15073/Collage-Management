@@ -14,7 +14,11 @@ class authService {
         this.authFactory = new auth_factory_1.authFactory();
     }
     async login(email, password) {
-        const user = await this.authFactory.findUserByEmail(email);
+        const normalizedEmail = email.trim().toLowerCase();
+        if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+            throw errorClass_1.AppError.badRequest("Please enter a valid email address");
+        }
+        const user = await this.authFactory.findUserByEmail(normalizedEmail);
         if (!user) {
             throw errorClass_1.AppError.unauthorized("Email address is not registered");
         }

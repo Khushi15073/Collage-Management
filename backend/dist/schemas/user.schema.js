@@ -74,6 +74,19 @@ const userSchema = new mongoose_1.default.Schema({
         type: mongoose_1.Schema.Types.ObjectId,
         ref: "Degree",
         default: null,
+    },
+    batch: {
+        type: String,
+        default: null,
+        trim: true,
+    },
+    enrollmentYear: {
+        type: Number,
+        default: null,
+    },
+    enrollmentDate: {
+        type: Date,
+        default: null,
     }
 }, {
     timestamps: true,

@@ -16,6 +16,38 @@ export class UserService {
   private degreeFactory = new DegreeFactory();
   private courseFactory = new CourseFactory();
 
+  private getAllowedEnrollmentYears() {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: 10 }, (_, index) => currentYear - index);
+  }
+
+  private normalizeEnrollmentDate(enrollmentDate: string | null | undefined) {
+    if (!enrollmentDate) {
+      throw AppError.badRequest("Enrollment date is required for students");
+    }
+
+    const normalizedDate = new Date(enrollmentDate);
+    if (Number.isNaN(normalizedDate.getTime())) {
+      throw AppError.badRequest("Enrollment date is invalid");
+    }
+
+    return normalizedDate;
+  }
+
+  private ensureValidEnrollmentYear(enrollmentYear: number | null | undefined) {
+    if (enrollmentYear == null) {
+      throw AppError.badRequest("Enrollment year is required for students");
+    }
+
+    if (!this.getAllowedEnrollmentYears().includes(Number(enrollmentYear))) {
+      throw AppError.badRequest("Enrollment year must come from the backend-provided options");
+    }
+  }
+
+  private buildBatchName(degreeName: string, enrollmentYear: number) {
+    return `${degreeName} ${enrollmentYear}`;
+  }
+
   public async createUser(userData: CreateUserDTO) {
     try {
       if (userData.email === "" || userData.password === "" || userData.name === "") {
@@ -48,8 +80,19 @@ export class UserService {
         if (!degree) {
           throw AppError.notFound("Degree not found");
         }
+
+        const enrollmentDate = this.normalizeEnrollmentDate(userData.enrollmentDate);
+        const enrollmentYear = enrollmentDate.getFullYear();
+        this.ensureValidEnrollmentYear(enrollmentYear);
+
+        userData.enrollmentDate = enrollmentDate.toISOString();
+        userData.enrollmentYear = enrollmentYear;
+        userData.batch = this.buildBatchName(degree.degreeName, enrollmentYear);
       } else {
         userData.degree = undefined;
+        userData.batch = undefined;
+        userData.enrollmentYear = undefined;
+        userData.enrollmentDate = undefined;
       }
 
       const hashedPassword = await bcrypt.hash(userData.password, 10);
@@ -184,8 +227,26 @@ export class UserService {
         if (!degree) {
           throw AppError.notFound("Degree not found");
         }
+
+        const nextEnrollmentDateRaw =
+          updateData.enrollmentDate !== undefined
+            ? updateData.enrollmentDate
+            : ((existingUser as any).enrollmentDate
+                ? new Date((existingUser as any).enrollmentDate).toISOString()
+                : null);
+
+        const nextEnrollmentDate = this.normalizeEnrollmentDate(nextEnrollmentDateRaw);
+        const nextEnrollmentYear = nextEnrollmentDate.getFullYear();
+        this.ensureValidEnrollmentYear(nextEnrollmentYear);
+
+        updateData.enrollmentDate = nextEnrollmentDate.toISOString();
+        updateData.enrollmentYear = nextEnrollmentYear;
+        updateData.batch = this.buildBatchName(degree.degreeName, nextEnrollmentYear);
       } else {
         updateData.degree = null;
+        updateData.batch = null;
+        updateData.enrollmentYear = null;
+        updateData.enrollmentDate = null;
       }
 
       const updatedUser = await this.userFactory.updateUser(userId, updateData);

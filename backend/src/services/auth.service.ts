@@ -9,7 +9,13 @@ export class authService {
   private authFactory = new authFactory();
 
   async login(email: string, password: string) {
-    const user = await this.authFactory.findUserByEmail(email);
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+      throw AppError.badRequest("Please enter a valid email address");
+    }
+
+    const user = await this.authFactory.findUserByEmail(normalizedEmail);
 
     if (!user) {
       throw AppError.unauthorized("Email address is not registered");

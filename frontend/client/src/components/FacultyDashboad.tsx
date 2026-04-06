@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useDashboardSearch } from "../context/DashboardSearchContext";
 import PaginationControls from "./ui/PaginationControls";
 import { usePagination } from "../hooks/usePagination";
 import StatsStrip from "./StatsStrip";
+import SearchField from "./ui/SearchField";
 
 const BASE_URL = "http://localhost:8000";
 
@@ -46,7 +46,7 @@ function statusStyles(status: FacultyCourse["status"]) {
 function FacultyDashboard() {
   const navigate = useNavigate();
   const user = useSelector((state: any) => state.auth.user);
-  const { searchQuery } = useDashboardSearch();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [summary, setSummary] = useState<FacultyDashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -126,6 +126,14 @@ function FacultyDashboard() {
       <div>
         <h1 className="text-2xl font-bold text-gray-800">Faculty Dashboard</h1>
         <p className="text-sm text-gray-400 mt-0.5">Welcome back, {user?.name || "Faculty"}</p>
+      </div>
+
+      <div className="mt-5 max-w-md">
+        <SearchField
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search classes..."
+        />
       </div>
 
       {error && (

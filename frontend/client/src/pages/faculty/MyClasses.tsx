@@ -3,8 +3,8 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import PaginationControls from "../../components/ui/PaginationControls";
 import { usePagination } from "../../hooks/usePagination";
-import { useDashboardSearch } from "../../context/DashboardSearchContext";
 import { matchesSearchQuery } from "../../utils/search";
+import SearchField from "../../components/ui/SearchField";
 
 const BASE_URL = "http://localhost:8000";
 
@@ -24,7 +24,7 @@ type FacultyDashboardSummary = {
 
 function MyClasses() {
   const navigate = useNavigate();
-  const { searchQuery } = useDashboardSearch();
+  const [searchQuery, setSearchQuery] = useState("");
   const [classes, setClasses] = useState<FacultyCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +92,14 @@ function MyClasses() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">My Classes</h1>
         <p className="text-gray-400 mt-1">Manage your teaching classes and course details</p>
+      </div>
+
+      <div className="mb-5 max-w-md">
+        <SearchField
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search classes..."
+        />
       </div>
 
       {error && (

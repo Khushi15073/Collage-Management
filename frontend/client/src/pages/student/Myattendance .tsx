@@ -11,8 +11,8 @@ import {
 } from "../../components/ui/Table";
 import PaginationControls from "../../components/ui/PaginationControls";
 import { usePagination } from "../../hooks/usePagination";
-import { useDashboardSearch } from "../../context/DashboardSearchContext";
 import { matchesSearchQuery } from "../../utils/search";
+import SearchField from "../../components/ui/SearchField";
 
 const BASE_URL = "http://localhost:8000";
 
@@ -45,7 +45,7 @@ function attendanceColor(pct: number) {
 }
 
 function MyAttendance() {
-  const { searchQuery } = useDashboardSearch();
+  const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"course" | "recent">("course");
   const [summary, setSummary] = useState<StudentAttendanceSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -138,6 +138,14 @@ function MyAttendance() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">My Attendance</h1>
         <p className="text-sm text-gray-400 mt-0.5">Track your attendance across all courses</p>
+      </div>
+
+      <div className="mb-5 max-w-md">
+        <SearchField
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search attendance..."
+        />
       </div>
 
       {error && (

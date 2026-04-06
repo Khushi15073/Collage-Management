@@ -3,9 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { logoutUser } from "../features/authSlice";
 import { formatRoleName } from "../access/appAccess";
 import StudentSidebar from "../components/StudentSidebar"; 
-import { DashboardSearchProvider } from "../context/DashboardSearchContext";
 import { Bell } from "lucide-react";
-import SearchField from "../components/ui/SearchField";
 
 interface StudentLayoutProps {
   children: React.ReactNode;
@@ -13,7 +11,6 @@ interface StudentLayoutProps {
 
 function StudentLayout({ children }: StudentLayoutProps) {
   const [collapsed, setCollapsed] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const dispatch = useDispatch();
 
   // ✅ User from Redux
@@ -32,7 +29,6 @@ function StudentLayout({ children }: StudentLayoutProps) {
   }
 
   return (
-    <DashboardSearchProvider value={{ searchQuery, setSearchQuery }}>
       <div className="flex h-screen bg-gray-50 overflow-hidden">
 
         {/* ── Sidebar ── */}
@@ -46,13 +42,8 @@ function StudentLayout({ children }: StudentLayoutProps) {
 
           {/* ── Header ── */}
           <header className="sticky top-0 z-20 shrink-0 flex items-center gap-4 border-b border-gray-100 bg-white px-6 py-3 shadow-sm">
-            {/* Search */}
-            <div className="flex-1 max-w-md">
-              <SearchField value={searchQuery} onChange={setSearchQuery} />
-            </div>
-
             {/* Right side */}
-            <div className="flex items-center gap-3 ml-auto">
+            <div className="ml-auto flex items-center gap-3">
               {/* Bell */}
               <button className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-xl transition-colors">
                 <Bell className="w-5 h-5" />
@@ -89,7 +80,6 @@ function StudentLayout({ children }: StudentLayoutProps) {
 
         </div>
       </div>
-    </DashboardSearchProvider>
   );
 }
 

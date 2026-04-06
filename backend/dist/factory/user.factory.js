@@ -58,7 +58,10 @@ class UserFactory {
                     { email: { $regex: normalizedSearch, $options: "i" } },
                     { phoneNumber: { $regex: normalizedSearch, $options: "i" } },
                     { gender: { $regex: normalizedSearch, $options: "i" } },
+                    { batch: { $regex: normalizedSearch, $options: "i" } },
+                    { enrollmentYear: Number.isNaN(Number(normalizedSearch)) ? undefined : Number(normalizedSearch) },
                 ];
+                filter.$or = filter.$or.filter(Boolean);
             }
             const skip = (_b = options === null || options === void 0 ? void 0 : options.skip) !== null && _b !== void 0 ? _b : 0;
             const limit = (_c = options === null || options === void 0 ? void 0 : options.limit) !== null && _c !== void 0 ? _c : 10;

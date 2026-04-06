@@ -24,6 +24,7 @@ export type DegreeRecord = {
   department: string;
   type: DegreeMode;
   count: number;
+  availableEnrollmentYears: number[];
   createdBy: string;
   createdDate: string;
   sections: DegreeSection[];
@@ -56,6 +57,9 @@ function normalizeDegree(degree: any): DegreeRecord {
     department: degree.department ?? "",
     type: (degree.type ?? "semester") as DegreeMode,
     count: Number(degree.count ?? 0),
+    availableEnrollmentYears: Array.isArray(degree.availableEnrollmentYears)
+      ? degree.availableEnrollmentYears.map((year: number) => Number(year))
+      : [],
     createdBy:
       typeof degree.createdBy === "object"
         ? degree.createdBy?.name || "Degree"

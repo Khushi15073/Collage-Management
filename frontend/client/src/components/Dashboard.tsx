@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/Table";
-import { useDashboardSearch } from "../context/DashboardSearchContext";
 import PaginationControls from "./ui/PaginationControls";
 import { usePagination } from "../hooks/usePagination";
 import StatsStrip from "./StatsStrip";
 import { matchesSearchQuery } from "../utils/search";
+import SearchField from "./ui/SearchField";
 
 const BASE_URL = "http://localhost:8000";
 
@@ -53,7 +53,7 @@ function getStatusBadge(status: RecentCourse["status"]) {
 
 export default function Dashboard() {
   const user = useSelector((state: any) => state.auth.user);
-  const { searchQuery } = useDashboardSearch();
+  const [searchQuery, setSearchQuery] = useState("");
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -129,6 +129,14 @@ export default function Dashboard() {
       <div className="mb-4 shrink-0">
         <h1 className="mb-1 text-3xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-gray-600">Welcome back, {displayName}</p>
+      </div>
+
+      <div className="mb-5 max-w-md shrink-0">
+        <SearchField
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search recent courses..."
+        />
       </div>
 
       {error && (

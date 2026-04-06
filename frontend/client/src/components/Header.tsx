@@ -2,14 +2,8 @@ import { Bell } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUser } from "../features/authSlice";
 import { formatRoleName } from "../access/appAccess";
-import SearchField from "./ui/SearchField";
 
-type HeaderProps = {
-  searchValue?: string;
-  onSearchChange?: (value: string) => void;
-};
-
-export default function Header({ searchValue = "", onSearchChange }: HeaderProps) {
+export default function Header() {
   const dispatch = useDispatch();
   const user = useSelector((state: any) => state.auth.user);
   const initials =
@@ -26,12 +20,8 @@ export default function Header({ searchValue = "", onSearchChange }: HeaderProps
 
   return (
     <header className="sticky top-0 z-20 shrink-0 border-b border-gray-200 bg-white px-6 py-4">
-      <div className="flex items-center justify-between">
-        <div className="flex-1 max-w-xl">
-          <SearchField value={searchValue} onChange={(value) => onSearchChange?.(value)} />
-        </div>
-
-        <div className="flex items-center gap-4 ml-6">
+      <div className="flex items-center justify-end">
+        <div className="flex items-center gap-4">
           <button className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <Bell className="w-5 h-5 text-gray-600" />
             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>

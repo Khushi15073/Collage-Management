@@ -43,6 +43,19 @@ const userSchema = new mongoose.Schema<IUser>(
       type: Schema.Types.ObjectId,
       ref: "Degree",
       default: null,
+    },
+    batch: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    enrollmentYear: {
+      type: Number,
+      default: null,
+    },
+    enrollmentDate: {
+      type: Date,
+      default: null,
     }
   },
   {

@@ -6,8 +6,9 @@ import type { Role } from "../../features/roleSlice";
 import { createPermission, fetchPermissions, syncDefaultPermissions } from "../../features/permissionSlice";
 import type { Permission } from "../../features/permissionSlice";
 import StatsStrip from "../../components/StatsStrip";
-import { useDashboardSearch } from "../../context/DashboardSearchContext";
 import { hasPermission } from "../../access/appAccess";
+import SearchField from "../../components/ui/SearchField";
+import { useToastMessage } from "../../hooks/useToastMessage";
 
 function formatRoleName(roleName: string) {
   return roleName.charAt(0).toUpperCase() + roleName.slice(1);
@@ -30,7 +31,7 @@ const HIDDEN_PERMISSION_NAMES = new Set([
 
 function RolesPermissions() {
   const dispatch = useDispatch();
-  const { searchQuery } = useDashboardSearch();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const roles = useSelector((state: any) => state.roles.roles) as Role[];
   const rolesLoading = useSelector((state: any) => state.roles.loading) as boolean;
@@ -261,6 +262,9 @@ function RolesPermissions() {
   const canCreateRole = hasPermission(user, "create_admins");
   const canUpdateRolePermissions = hasPermission(user, "update_admins");
   const canCreatePermission = hasPermission(user, "create_permissions");
+  useToastMessage(pageError, "error");
+  useToastMessage(saved ? "Changes saved successfully!" : null, "success");
+  useToastMessage(roleSaved ? "Role created successfully!" : null, "success");
 
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-gray-50 p-8">
@@ -288,17 +292,13 @@ function RolesPermissions() {
         </div>
       </div>
 
-      {saved && (
-        <div className="fixed top-6 right-6 bg-green-600 text-white px-5 py-3 rounded-xl shadow-lg text-sm font-semibold z-50 flex items-center gap-2">
-          <Check size={15} /> Changes saved successfully!
-        </div>
-      )}
-
-      {roleSaved && (
-        <div className="fixed top-20 right-6 bg-blue-600 text-white px-5 py-3 rounded-xl shadow-lg text-sm font-semibold z-50 flex items-center gap-2">
-          <Check size={15} /> Role created successfully!
-        </div>
-      )}
+      <div className="mb-5 max-w-md shrink-0">
+        <SearchField
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search permissions..."
+        />
+      </div>
 
       {pageError && (
         <div className="mb-6 shrink-0 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">

@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { Eye, EyeOff, GraduationCap } from "lucide-react";
 import { clearAuthError, loginUser } from "../features/authSlice";
+import { showErrorToast } from "../utils/toast";
 
 function StudentLogin() {
   const navigate = useNavigate();
@@ -35,6 +36,7 @@ function StudentLogin() {
   async function handleLogin() {
     const nextErrors: { email?: string; password?: string } = {};
     if (!email.trim()) nextErrors.email = "Email is required.";
+    else if (!/^\S+@\S+\.\S+$/.test(email.trim())) nextErrors.email = "Please enter a valid email address.";
     if (!password.trim()) nextErrors.password = "Password is required.";
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
@@ -47,7 +49,7 @@ function StudentLogin() {
       if (role === "student") {
         navigate("/student/dashboard");
       } else {
-        alert("Access denied. This portal is for Students only.");
+        showErrorToast("Access denied. This portal is for Students only.");
       }
       return;
     }

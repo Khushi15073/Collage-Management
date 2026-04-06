@@ -4,8 +4,8 @@ import { BookOpen, Users, Calendar } from "lucide-react";
 import StatsStrip from "../../components/StatsStrip";
 import PaginationControls from "../../components/ui/PaginationControls";
 import { usePagination } from "../../hooks/usePagination";
-import { useDashboardSearch } from "../../context/DashboardSearchContext";
 import { matchesSearchQuery } from "../../utils/search";
+import SearchField from "../../components/ui/SearchField";
 
 const BASE_URL = "http://localhost:8000";
 
@@ -35,7 +35,7 @@ type StudentDashboardSummary = {
 };
 
 function MyCourses() {
-  const { searchQuery } = useDashboardSearch();
+  const [searchQuery, setSearchQuery] = useState("");
   const [summary, setSummary] = useState<StudentDashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -125,6 +125,14 @@ function MyCourses() {
     <div className="flex h-full flex-col overflow-hidden bg-gray-50 p-6">
       <div className="mb-4 shrink-0">
         <h1 className="text-2xl font-bold text-gray-900">My Courses</h1>
+      </div>
+
+      <div className="mb-5 max-w-md shrink-0">
+        <SearchField
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search my courses..."
+        />
       </div>
 
       {error && (

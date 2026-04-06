@@ -64,7 +64,10 @@ export class UserFactory {
           { email: { $regex: normalizedSearch, $options: "i" } },
           { phoneNumber: { $regex: normalizedSearch, $options: "i" } },
           { gender: { $regex: normalizedSearch, $options: "i" } },
+          { batch: { $regex: normalizedSearch, $options: "i" } },
+          { enrollmentYear: Number.isNaN(Number(normalizedSearch)) ? undefined : Number(normalizedSearch) },
         ];
+        filter.$or = filter.$or.filter(Boolean);
       }
 
       const skip = options?.skip ?? 0;

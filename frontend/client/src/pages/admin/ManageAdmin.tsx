@@ -22,8 +22,9 @@ import {
   TableRow,
 } from "../../components/ui/Table";
 import PaginationControls from "../../components/ui/PaginationControls";
-import { useDashboardSearch } from "../../context/DashboardSearchContext";
 import { hasPermission } from "../../access/appAccess";
+import SearchField from "../../components/ui/SearchField";
+import { useToastMessage } from "../../hooks/useToastMessage";
 
 const emptyForm = {
   name: "",
@@ -38,7 +39,7 @@ type FormErrors = Partial<Record<keyof typeof emptyForm, string>>;
 
 function ManageAdmin() {
   const dispatch = useDispatch();
-  const { searchQuery } = useDashboardSearch();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const admins = useSelector((state: any) => state.admins.admins);
   const loading = useSelector((state: any) => state.admins.loading);
@@ -233,6 +234,8 @@ function ManageAdmin() {
   const canCreate = hasPermission(user, "create_admins");
   const canUpdate = hasPermission(user, "update_admins");
   const canDelete = hasPermission(user, "delete_admins");
+  useToastMessage(isSessionError ? null : pageError, "error");
+  useToastMessage(emailNotice?.message, emailNotice?.sent ? "success" : "info");
 
   function handleFieldChange<K extends keyof typeof emptyForm>(field: K, value: (typeof emptyForm)[K]) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -259,6 +262,14 @@ function ManageAdmin() {
         >
           <Plus size={15} /> Add User
         </button>
+      </div>
+
+      <div className="mb-5 max-w-md">
+        <SearchField
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search role users..."
+        />
       </div>
 
       {pageError && (
@@ -531,29 +542,6 @@ function ManageAdmin() {
         </div>
       )}
 
-      {emailNotice && (
-        <div className="fixed bottom-6 right-6 z-50 w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl">
-          <div className="mb-3 flex items-start justify-between gap-4">
-            <div>
-              <h3 className="text-base font-semibold text-gray-900">User Created</h3>
-              <p className="mt-1 text-xs text-gray-400">Credential email delivery status</p>
-            </div>
-            <button
-              onClick={() => setEmailNotice(null)}
-              className="rounded-lg px-2 py-1 text-xs text-gray-500 hover:bg-gray-100"
-            >
-              Close
-            </button>
-          </div>
-          <div
-            className={`rounded-xl p-4 text-sm ${
-              emailNotice.sent ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
-            }`}
-          >
-            {emailNotice.message}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

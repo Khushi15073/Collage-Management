@@ -9,6 +9,27 @@ export class DegreeService {
   private degreeFactory = new DegreeFactory();
   private courseFactory = new CourseFactory();
 
+  private buildEnrollmentYears() {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: 10 }, (_, index) => currentYear - index);
+  }
+
+  private decorateDegree<T extends { toObject?: () => any } | Record<string, any>>(degree: T | null) {
+    if (!degree) {
+      return degree;
+    }
+
+    const normalizedDegree =
+      typeof (degree as any).toObject === "function"
+        ? (degree as any).toObject()
+        : degree;
+
+    return {
+      ...normalizedDegree,
+      availableEnrollmentYears: this.buildEnrollmentYears(),
+    };
+  }
+
   private async ensureCourseCodesAvailable(sections: IDegreeSection[], degreeId?: string) {
     const codes = sections.flatMap((section) =>
       section.courses.map((course) => course.code.trim().toUpperCase())
@@ -113,7 +134,7 @@ export class DegreeService {
     return ResponseHandler.sendResponse(
       ResponseCodes.CREATED,
       "Degree created successfully",
-      populatedDegree
+      this.decorateDegree(populatedDegree)
     );
   }
 
@@ -123,7 +144,7 @@ export class DegreeService {
     return ResponseHandler.sendResponse(
       ResponseCodes.OK,
       "Degrees fetched successfully",
-      degrees
+      degrees.map((degree) => this.decorateDegree(degree))
     );
   }
 
@@ -136,7 +157,7 @@ export class DegreeService {
     return ResponseHandler.sendResponse(
       ResponseCodes.OK,
       "Degree fetched successfully",
-      degree
+      this.decorateDegree(degree)
     );
   }
 
@@ -191,7 +212,7 @@ export class DegreeService {
     return ResponseHandler.sendResponse(
       ResponseCodes.OK,
       "Degree updated successfully",
-      updated
+      this.decorateDegree(updated)
     );
   }
 

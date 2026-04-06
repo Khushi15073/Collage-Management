@@ -13,8 +13,9 @@ import {
 } from "../../components/ui/Table";
 import PaginationControls from "../../components/ui/PaginationControls";
 import { usePagination } from "../../hooks/usePagination";
-import { useDashboardSearch } from "../../context/DashboardSearchContext";
 import { matchesSearchQuery } from "../../utils/search";
+import SearchField from "../../components/ui/SearchField";
+import { useToastMessage } from "../../hooks/useToastMessage";
 
 const BASE_URL = "http://localhost:8000";
 
@@ -35,7 +36,7 @@ type AttendanceStudent = {
 
 function MarkAttendance() {
   const today = new Date().toISOString().split("T")[0];
-  const { searchQuery } = useDashboardSearch();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [courses, setCourses] = useState<AttendanceCourse[]>([]);
   const [courseId, setCourseId] = useState("");
@@ -48,6 +49,8 @@ function MarkAttendance() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  useToastMessage(error, "error");
+  useToastMessage(success, "success");
 
   useEffect(() => {
     let active = true;
@@ -239,6 +242,14 @@ function MarkAttendance() {
             {saving ? "Saving..." : "Save Attendance"}
           </button>
         </div>
+      </div>
+
+      <div className="mb-5 max-w-md">
+        <SearchField
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search students in attendance..."
+        />
       </div>
 
       {(error || success) && (

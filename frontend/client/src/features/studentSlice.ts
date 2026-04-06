@@ -18,6 +18,9 @@ export type Student = {
   phoneNumber: string;
   gender: "male" | "female" | "other";
   role?: StudentRole;
+  batch?: string;
+  enrollmentYear?: number;
+  enrollmentDate?: string;
   degree?: Pick<DegreeRecord, "id" | "degreeName" | "department" | "type" | "count">;
 };
 
@@ -56,6 +59,13 @@ function normalizeStudent(student: any): Student {
     email: student.email,
     phoneNumber: student.phoneNumber,
     gender: student.gender,
+    batch: student.batch ?? undefined,
+    enrollmentYear:
+      student.enrollmentYear == null ? undefined : Number(student.enrollmentYear),
+    enrollmentDate:
+      student.enrollmentDate == null
+        ? undefined
+        : new Date(student.enrollmentDate).toISOString().split("T")[0],
     role:
       student.role && typeof student.role === "object"
         ? { _id: student.role._id, name: student.role.name }
@@ -142,6 +152,7 @@ export const createStudent = createAsyncThunk(
       gender: string;
       role: string;
       degree: string;
+      enrollmentDate: string;
     },
     { rejectWithValue }
     ) => {
@@ -173,6 +184,7 @@ export const updateStudent = createAsyncThunk(
       gender: string;
       role: string;
       degree: string;
+      enrollmentDate: string;
       password?: string;
     },
     { rejectWithValue }

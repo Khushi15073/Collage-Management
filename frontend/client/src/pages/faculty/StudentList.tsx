@@ -12,8 +12,8 @@ import {
 } from "../../components/ui/Table";
 import PaginationControls from "../../components/ui/PaginationControls";
 import { usePagination } from "../../hooks/usePagination";
-import { useDashboardSearch } from "../../context/DashboardSearchContext";
 import { matchesSearchQuery } from "../../utils/search";
+import SearchField from "../../components/ui/SearchField";
 
 const BASE_URL = "http://localhost:8000";
 
@@ -38,7 +38,7 @@ type FacultyStudentsResponse = {
 };
 
 function StudentList() {
-  const { searchQuery } = useDashboardSearch();
+  const [searchQuery, setSearchQuery] = useState("");
   const [data, setData] = useState<FacultyStudentsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +110,14 @@ function StudentList() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Student List</h1>
         <p className="mt-1 text-gray-400">Students assigned to your courses</p>
+      </div>
+
+      <div className="mb-5 max-w-md">
+        <SearchField
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search students..."
+        />
       </div>
 
       {error && (

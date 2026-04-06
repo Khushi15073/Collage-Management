@@ -25,7 +25,6 @@ import {
 } from "../../components/ui/Table";
 import PaginationControls from "../../components/ui/PaginationControls";
 import { usePagination } from "../../hooks/usePagination";
-import { useDashboardSearch } from "../../context/DashboardSearchContext";
 import { matchesSearchQuery } from "../../utils/search";
 import SearchField from "../../components/ui/SearchField";
 import { hasPermission } from "../../access/appAccess";
@@ -44,7 +43,7 @@ type FormErrors = Partial<Record<"code" | "name" | "department" | "instructor" |
 
 function ManageCourses() {
   const dispatch = useDispatch();
-  const { searchQuery } = useDashboardSearch();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const courses = useSelector((state: any) => state.courses.courses) as Course[];
   const loading = useSelector((state: any) => state.courses.loading) as boolean;
@@ -309,6 +308,14 @@ function ManageCourses() {
         >
           <Plus size={15} /> Add Course
         </button>
+      </div>
+
+      <div className="mb-5 max-w-md">
+        <SearchField
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search courses..."
+        />
       </div>
 
       {pageError && (
